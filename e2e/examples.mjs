@@ -65,10 +65,14 @@ export const runExamples = async ({ env, cred }) => {
 		const phone = `55119${String(Math.floor(Math.random() * 1e8)).padStart(8, '0')}`;
 		const name = `ex${Date.now().toString(36)} Ana`;
 		const before = await executionIds(id);
-		const res = await fetch(`${URL_N8N}/webhook/${path}`, {
-			method: 'POST', headers: { 'content-type': 'application/json' },
-			body: JSON.stringify({ name, phone, email: `${phone}@example.com`, value: 1500 }),
-		});
+		// The first non-404 answer is the real one: the production webhook can take a moment to register.
+		const res = await waitFor(async () => {
+			const r = await fetch(`${URL_N8N}/webhook/${path}`, {
+				method: 'POST', headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ name, phone, email: `${phone}@example.com`, value: 1500 }),
+			});
+			return r.status === 404 ? null : r;
+		}, 'the webhook to be registered');
 		assert(res.status === 200, `webhook ${res.status}`);
 		const execId = await waitFor(async () => (await executionIds(id)).find((x) => !before.includes(x)), 'the execution');
 		const exec = await waitExecution(execId, 60000);
