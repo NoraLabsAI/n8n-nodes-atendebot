@@ -69,6 +69,7 @@ describe('AtendeBotTrigger.create (credential id)', () => {
 			getNodeParameter: (name: string) => (name === 'events' ? ['message.sent'] : false),
 			getWorkflow: () => ({ id: 'wf', name: 'W' }),
 			getWorkflowStaticData: () => staticData,
+			logger: { warn: () => undefined },
 			helpers: { httpRequestWithAuthentication: request },
 		} as unknown as IHookFunctions;
 		return { ctx, staticData };

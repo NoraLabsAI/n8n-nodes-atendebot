@@ -155,8 +155,9 @@ export class AtendeBotTrigger implements INodeType {
 					const me = (await apiRequest(this, { method: 'GET', path: '/me' })).body as MeBody;
 					const credentialId = (me.data?.credential ?? me.credential)?.id;
 					if (credentialId) data.credentialId = credentialId;
-				} catch {
+				} catch (error) {
 					// the subscription is already created; never fail the activation over this
+					this.logger.warn(`AtendeBot Trigger: could not read the credential id: ${(error as Error).message}`);
 				}
 				return true;
 			},
