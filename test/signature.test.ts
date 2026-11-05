@@ -2,7 +2,7 @@ import { createHmac } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { isValidSignature } from '../lib/signature';
 
-const HMAC_KEY = 'a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90';
+const HMAC_KEY = 'ab'.repeat(32);
 
 // The server signs the JSON.stringify string of the envelope (deliverOnce): same here.
 const body = JSON.stringify({
