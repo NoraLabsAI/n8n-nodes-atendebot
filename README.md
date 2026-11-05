@@ -96,6 +96,12 @@ events. The output is the whole event envelope (`event`, `data`, `tenant`, `time
   checks it against the exact bytes received and answers 401 to anything else. The secret is
   generated on activation and **stored in clear text in the workflow's static data**, so it is
   visible in the n8n database and in workflow exports.
+- **Ignore Events Caused by This Credential** (Options, on by default). Skips events caused by
+  calls this same credential made through the API, such as a message this workflow sent, so the
+  workflow does not trigger itself. Only the event produced right by the call carries that
+  information; later effects, such as the delivery status coming back from the provider, arrive
+  like any other event. It needs an AtendeBot server that reports the credential; on an older one
+  the option does nothing.
 - **No duplicate protection.** AtendeBot retries a failed delivery, so the same event can arrive
   more than once. The node does not dedupe by `event_id`; do it in the workflow if it matters.
 

@@ -23,6 +23,11 @@ interface Subscription {
 	url: string;
 }
 
+interface MeBody {
+	data?: { credential?: { id?: string } };
+	credential?: { id?: string };
+}
+
 const webhookPath = (id: string) => `/webhooks/${encodeURIComponent(id)}`;
 
 /** True when the subscription is gone (404). Any other failure throws. */
@@ -69,6 +74,23 @@ export class AtendeBotTrigger implements INodeType {
 				type: 'boolean',
 				default: false,
 				description: 'Whether to also receive the events of WhatsApp groups',
+			},
+			{
+				displayName: 'Options',
+				name: 'options',
+				type: 'collection',
+				placeholder: 'Add Option',
+				default: {},
+				options: [
+					{
+						displayName: 'Ignore Events Caused by This Credential',
+						name: 'ignoreOwnEvents',
+						type: 'boolean',
+						default: true,
+						description:
+							'Whether to skip events triggered by actions this same AtendeBot credential made through the API (e.g. a message this workflow sent), to avoid loops',
+					},
+				],
 			},
 		],
 	};
@@ -127,6 +149,15 @@ export class AtendeBotTrigger implements INodeType {
 				const data = this.getWorkflowStaticData('node');
 				data.webhookId = (body as { data: Subscription }).data.id;
 				data.secret = secret;
+				// Best effort: an old server has no id, and the option just does nothing then.
+				delete data.credentialId;
+				try {
+					const me = (await apiRequest(this, { method: 'GET', path: '/me' })).body as MeBody;
+					const credentialId = (me.data?.credential ?? me.credential)?.id;
+					if (credentialId) data.credentialId = credentialId;
+				} catch {
+					// the subscription is already created; never fail the activation over this
+				}
 				return true;
 			},
 
@@ -135,6 +166,7 @@ export class AtendeBotTrigger implements INodeType {
 				if (data.webhookId) await deleteSubscription(this, String(data.webhookId));
 				delete data.webhookId;
 				delete data.secret;
+				delete data.credentialId;
 				return true;
 			},
 		},
@@ -149,6 +181,13 @@ export class AtendeBotTrigger implements INodeType {
 			this.getResponseObject().status(401).end();
 			return { noWebhookResponse: true };
 		}
-		return { workflowData: [this.helpers.returnJsonArray(request.body as IDataObject)] };
+		const staticData = this.getWorkflowStaticData('node');
+		const body = request.body as IDataObject;
+		const options = this.getNodeParameter('options', {}) as { ignoreOwnEvents?: boolean };
+		const ignoreOwn = options.ignoreOwnEvents ?? true;
+		const causedBy = (body.credential as { id?: string } | null | undefined)?.id;
+		// No workflowData: n8n answers 200 itself and starts no execution, so AtendeBot does not retry.
+		if (ignoreOwn && staticData.credentialId && causedBy === staticData.credentialId) return {};
+		return { workflowData: [this.helpers.returnJsonArray(body)] };
 	}
 }
