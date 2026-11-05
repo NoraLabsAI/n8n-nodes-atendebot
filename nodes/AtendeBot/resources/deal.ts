@@ -127,7 +127,7 @@ const dealId: INodeProperties = {
 	type: 'string',
 	required: true,
 	default: '',
-	displayOptions: showFor(R, 'get', 'update', 'moveToStage'),
+	displayOptions: showFor(R, 'get', 'update', 'moveToStage', 'addNote', 'getNotes', 'deleteNote', 'duplicate', 'delete'),
 };
 
 export const deal: ResourceDefinition = {
@@ -140,14 +140,36 @@ export const deal: ResourceDefinition = {
 			displayOptions: showFor(R),
 			default: 'create',
 			options: [
+				{ name: 'Add Note', value: 'addNote', action: 'Add a note to a deal', description: 'Add a note to the deal timeline' },
 				{ name: 'Create', value: 'create', action: 'Create a deal', description: 'Create a deal in a pipeline' },
+				{ name: 'Delete', value: 'delete', action: 'Delete a deal', description: 'Delete a deal for good, with its notes and tasks' },
+				{ name: 'Delete Note', value: 'deleteNote', action: 'Delete a note of a deal', description: 'Delete one note of a deal' },
+				{ name: 'Duplicate', value: 'duplicate', action: 'Duplicate a deal', description: 'Copy a deal with a (copy) suffix. Custom field values are not copied.' },
 				{ name: 'Get', value: 'get', action: 'Get a deal', description: 'Get a deal by ID' },
 				{ name: 'Get Many', value: 'getAll', action: 'Get many deals', description: 'Get many deals' },
+				{ name: 'Get Notes', value: 'getNotes', action: 'Get the notes of a deal', description: 'Get the notes of a deal' },
 				{ name: 'Move to Stage', value: 'moveToStage', action: 'Move a deal to a stage', description: 'Move a deal to another stage' },
 				{ name: 'Update', value: 'update', action: 'Update a deal', description: 'Update a deal' },
 			],
 		},
 		dealId,
+		{
+			displayName: 'Note',
+			name: 'noteText',
+			type: 'string',
+			typeOptions: { rows: 4 },
+			required: true,
+			default: '',
+			displayOptions: showFor(R, 'addNote'),
+		},
+		{
+			displayName: 'Note ID',
+			name: 'noteId',
+			type: 'string',
+			required: true,
+			default: '',
+			displayOptions: showFor(R, 'deleteNote'),
+		},
 		{
 			displayName: 'Title',
 			name: 'title',
@@ -179,7 +201,7 @@ export const deal: ResourceDefinition = {
 			displayOptions: showFor(R, 'update'),
 			options: [{ displayName: 'Title', name: 'title', type: 'string', default: '' }, ...dealOptions()],
 		},
-		...returnAllProperties(R),
+		...returnAllProperties(R, ['getAll', 'getNotes']),
 		{
 			displayName: 'Filters',
 			name: 'filters',
@@ -277,6 +299,36 @@ export const deal: ResourceDefinition = {
 			return status === 404 ? [] : [body as IDataObject];
 		},
 
+		addNote: async (ctx, i) => {
+			const { body } = await apiRequest(
+				ctx,
+				{ method: 'POST', path: `${dealPath(ctx, i)}/notes`, body: { text: ctx.getNodeParameter('noteText', i) as string } },
+				i,
+			);
+			return [body as IDataObject];
+		},
+
+		getNotes: async (ctx, i) =>
+			listAll<IDataObject>(ctx, `${dealPath(ctx, i)}/notes`, {}, readLimit(ctx, i), i),
+
+		deleteNote: async (ctx, i) => {
+			const noteId = ctx.getNodeParameter('noteId', i) as string;
+			await apiRequest(ctx, { method: 'DELETE', path: `${dealPath(ctx, i)}/notes/${pathRef(noteId)}` }, i);
+			return [{ deleted: true, id: noteId }];
+		},
+
+		duplicate: async (ctx, i) => {
+			const { body } = await apiRequest(ctx, { method: 'POST', path: `${dealPath(ctx, i)}/duplicate` }, i);
+			return [body as IDataObject];
+		},
+
+		// The API makes `confirm=true` mandatory so a loop cannot wipe deals by accident;
+		// choosing this operation is the confirmation.
+		delete: async (ctx, i) => {
+			await apiRequest(ctx, { method: 'DELETE', path: dealPath(ctx, i), query: { confirm: true } }, i);
+			return [{ deleted: true, id: ctx.getNodeParameter('dealId', i) as string }];
+		},
+
 		getAll: async (ctx, i) => {
 			const filters = ctx.getNodeParameter('filters', i) as IDataObject;
 			return listAll<IDataObject>(
@@ -295,6 +347,9 @@ export const deal: ResourceDefinition = {
 		},
 	},
 };
+
+const dealPath = (ctx: IExecuteFunctions, i: number): string =>
+	`/cards/${pathRef(ctx.getNodeParameter('dealId', i) as string)}`;
 
 const dealBody = (
 	ctx: IExecuteFunctions,

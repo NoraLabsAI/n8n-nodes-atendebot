@@ -19,7 +19,9 @@ export interface ApiRequest {
 	method: IHttpRequestMethods;
 	path: string;
 	query?: Query;
-	body?: IDataObject;
+	body?: IDataObject | Buffer;
+	/** Only for a raw `Buffer` body (multipart upload); JSON bodies need none. */
+	contentType?: string;
 	/** Set only for the create-style POSTs the API fences with `Idempotency-Key`. */
 	idempotent?: boolean;
 	/** Lets the caller read a 404 as "not found" instead of an error. */
@@ -54,7 +56,7 @@ export const apiRequest = async (
 ): Promise<ApiResponse> => {
 	const credentials = await ctx.getCredentials('atendeBotApi');
 	const baseUrl = normalizeBaseUrl(String(credentials.baseUrl), ctx.getNode());
-	const headers: IDataObject = {};
+	const headers: IDataObject = request.contentType ? { 'Content-Type': request.contentType } : {};
 	if (request.idempotent && itemIndex !== undefined) {
 		// An item index only exists when running an item, i.e. in an execute context.
 		const exec = ctx as IExecuteFunctions;

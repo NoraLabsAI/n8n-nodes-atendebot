@@ -1,11 +1,43 @@
-import type { IDataObject } from 'n8n-workflow';
-import { contactRef } from '../../../lib/refs';
-import { apiRequest } from '../../../lib/transport';
-import { showFor } from './shared';
+import type { IDataObject, IExecuteFunctions } from 'n8n-workflow';
+import { NodeOperationError } from 'n8n-workflow';
+import { multipartFile } from '../../../lib/multipart';
+import { contactRef, pathRef } from '../../../lib/refs';
+import { orderTemplateParams, type TemplateShape, templateVariableNames } from '../../../lib/templateVariables';
+import { apiRequest, listAll } from '../../../lib/transport';
+import { readLimit, returnAllProperties, showFor, toApiDate } from './shared';
 import type { ResourceDefinition } from './types';
 
 const R = 'message';
 const SEND = ['send'];
+
+/** Uploads the n8n binary to `POST /files` and returns what the media object of a send needs. */
+const uploadBinary = async (ctx: IExecuteFunctions, i: number) => {
+	const property = ctx.getNodeParameter('binaryProperty', i) as string;
+	const binary = ctx.helpers.assertBinaryData(i, property);
+	const buffer = await ctx.helpers.getBinaryDataBuffer(i, property);
+	const { body, contentType } = multipartFile(
+		'file',
+		buffer,
+		binary.fileName ?? `file.${binary.fileExtension ?? 'bin'}`,
+		binary.mimeType,
+	);
+	const { body: response } = await apiRequest(ctx, { method: 'POST', path: '/files', body, contentType }, i);
+	return (response as { data: { url: string; type: string; filename: string | null } }).data;
+};
+
+/** Template values in the order the API expects them, from the fields named after the variables. */
+const readTemplateParams = async (ctx: IExecuteFunctions, i: number, template: string) => {
+	const { body } = await apiRequest(ctx, { method: 'GET', path: `/templates/${pathRef(template)}` }, i);
+	const names = templateVariableNames((body as { data: TemplateShape }).data);
+	const mapped = ctx.getNodeParameter('templateVariables', i, {}) as { value?: IDataObject | null };
+	const { params, missing } = orderTemplateParams(names, mapped.value);
+	if (missing.length) {
+		throw new NodeOperationError(ctx.getNode(), `No value for the template variable(s): ${missing.join(', ')}`, {
+			itemIndex: i,
+		});
+	}
+	return params;
+};
 
 const when = (extra: Record<string, unknown[]>) => ({
 	show: { resource: [R], operation: SEND, ...extra },
@@ -21,7 +53,43 @@ export const message: ResourceDefinition = {
 			displayOptions: showFor(R),
 			default: 'send',
 			options: [
+				{ name: 'Get', value: 'get', action: 'Get a message', description: 'Get a message by ID, with its delivery status' },
+				{ name: 'Get Many', value: 'getAll', action: 'Get many messages', description: 'Get many messages, with their delivery status' },
 				{ name: 'Send', value: 'send', action: 'Send a message', description: 'Send a message to a contact or into a conversation' },
+			],
+		},
+		{
+			displayName: 'Message ID',
+			name: 'messageId',
+			type: 'string',
+			required: true,
+			default: '',
+			displayOptions: showFor(R, 'get'),
+		},
+		...returnAllProperties(R),
+		{
+			displayName: 'Filters',
+			name: 'filters',
+			type: 'collection',
+			placeholder: 'Add Filter',
+			default: {},
+			displayOptions: showFor(R, 'getAll'),
+			options: [
+				{ displayName: 'Conversation ID', name: 'conversation', type: 'string', default: '' },
+				{
+					displayName: 'Oldest First',
+					name: 'oldestFirst',
+					type: 'boolean',
+					default: false,
+					description: 'Whether to start from the oldest messages. The default is the newest first, which matters with a Limit.',
+				},
+				{
+					displayName: 'Since',
+					name: 'since',
+					type: 'dateTime',
+					default: '',
+					description: 'Only messages created from this moment. Read in the workflow timezone unless the value carries its own.',
+				},
 			],
 		},
 		{
@@ -72,6 +140,7 @@ export const message: ResourceDefinition = {
 			options: [
 				{ name: 'Text', value: 'text' },
 				{ name: 'Media (by URL)', value: 'media' },
+				{ name: 'Media (From Binary File)', value: 'mediaBinary' },
 				{ name: 'Template', value: 'template' },
 			],
 		},
@@ -94,6 +163,16 @@ export const message: ResourceDefinition = {
 			displayOptions: when({ messageType: ['media'] }),
 		},
 		{
+			displayName: 'Input Binary Field',
+			name: 'binaryProperty',
+			type: 'string',
+			required: true,
+			default: 'data',
+			description:
+				'Name of the binary property that holds the file. It is uploaded to AtendeBot first, and the link it gets is public, permanent and cannot be removed through the API. Needs the files:write scope.',
+			displayOptions: when({ messageType: ['mediaBinary'] }),
+		},
+		{
 			displayName: 'Media Type',
 			name: 'mediaType',
 			type: 'options',
@@ -108,18 +187,34 @@ export const message: ResourceDefinition = {
 			],
 		},
 		{
+			displayName: 'Media Type',
+			name: 'binaryMediaType',
+			type: 'options',
+			default: 'auto',
+			displayOptions: when({ messageType: ['mediaBinary'] }),
+			options: [
+				{ name: 'Audio', value: 'audio' },
+				{ name: 'Detect From File', value: 'auto' },
+				{ name: 'Document', value: 'document' },
+				{ name: 'Image', value: 'image' },
+				{ name: 'Sticker', value: 'sticker' },
+				{ name: 'Video', value: 'video' },
+			],
+		},
+		{
 			displayName: 'File Name',
 			name: 'mediaFilename',
 			type: 'string',
 			default: '',
-			displayOptions: when({ messageType: ['media'] }),
+			description: 'Leave empty to keep the name of the file',
+			displayOptions: when({ messageType: ['media', 'mediaBinary'] }),
 		},
 		{
 			displayName: 'Caption',
 			name: 'caption',
 			type: 'string',
 			default: '',
-			displayOptions: when({ messageType: ['media'] }),
+			displayOptions: when({ messageType: ['media', 'mediaBinary'] }),
 		},
 		{
 			displayName: 'Template Name or ID',
@@ -134,20 +229,23 @@ export const message: ResourceDefinition = {
 		},
 		{
 			displayName: 'Template Variables',
-			name: 'templateParams',
-			type: 'fixedCollection',
-			typeOptions: { multipleValues: true },
-			placeholder: 'Add Variable',
-			default: {},
-			description: 'Values of {{1}}, {{2}}... in order. The count must match the template.',
+			name: 'templateVariables',
+			type: 'resourceMapper',
+			noDataExpression: true,
+			default: { mappingMode: 'defineBelow', value: null },
+			description: 'One field for each variable of the template, named after it',
 			displayOptions: when({ messageType: ['template'] }),
-			options: [
-				{
-					displayName: 'Variable',
-					name: 'values',
-					values: [{ displayName: 'Value', name: 'value', type: 'string', default: '' }],
+			typeOptions: {
+				loadOptionsDependsOn: ['template'],
+				resourceMapper: {
+					resourceMapperMethod: 'getTemplateVariables',
+					mode: 'add',
+					fieldWords: { singular: 'variable', plural: 'variables' },
+					addAllFields: true,
+					multiKeyMatch: false,
+					supportAutoMap: false,
 				},
-			],
+			},
 		},
 		{
 			displayName: 'Header Media URL',
@@ -194,6 +292,34 @@ export const message: ResourceDefinition = {
 	],
 
 	operations: {
+		get: async (ctx, i) => {
+			const { status, body } = await apiRequest(
+				ctx,
+				{
+					method: 'GET',
+					path: `/messages/${pathRef(ctx.getNodeParameter('messageId', i) as string)}`,
+					notFoundOk: true,
+				},
+				i,
+			);
+			return status === 404 ? [] : [body as IDataObject];
+		},
+
+		getAll: async (ctx, i) => {
+			const filters = ctx.getNodeParameter('filters', i) as IDataObject;
+			return listAll<IDataObject>(
+				ctx,
+				'/messages',
+				{
+					conversation: filters.conversation as string,
+					since: filters.since ? toApiDate(ctx, filters.since as string) : undefined,
+					order: filters.oldestFirst ? 'asc' : undefined,
+				},
+				readLimit(ctx, i),
+				i,
+			);
+		},
+
 		send: async (ctx, i) => {
 			const body: IDataObject = {};
 			if (ctx.getNodeParameter('destination', i) === 'contact') {
@@ -205,22 +331,27 @@ export const message: ResourceDefinition = {
 
 			const type = ctx.getNodeParameter('messageType', i);
 			if (type === 'text') body.content = ctx.getNodeParameter('text', i);
-			if (type === 'media') {
+			if (type === 'media' || type === 'mediaBinary') {
 				const filename = ctx.getNodeParameter('mediaFilename', i) as string;
-				body.media = {
-					url: ctx.getNodeParameter('mediaUrl', i),
-					type: ctx.getNodeParameter('mediaType', i),
-					...(filename ? { filename } : {}),
-				};
+				if (type === 'media') {
+					body.media = {
+						url: ctx.getNodeParameter('mediaUrl', i),
+						type: ctx.getNodeParameter('mediaType', i),
+						...(filename ? { filename } : {}),
+					};
+				} else {
+					const file = await uploadBinary(ctx, i);
+					const chosen = ctx.getNodeParameter('binaryMediaType', i) as string;
+					const name = filename || file.filename;
+					body.media = { url: file.url, type: chosen === 'auto' ? file.type : chosen, ...(name ? { filename: name } : {}) };
+				}
 				const caption = ctx.getNodeParameter('caption', i) as string;
 				if (caption) body.content = caption;
 			}
 			if (type === 'template') {
 				body.template = ctx.getNodeParameter('template', i);
-				const values = (
-					ctx.getNodeParameter('templateParams', i) as { values?: { value: string }[] }
-				).values;
-				if (values?.length) body.params = values.map((v) => String(v.value));
+				const params = await readTemplateParams(ctx, i, body.template as string);
+				if (params.length) body.params = params;
 				const header = ctx.getNodeParameter('headerMediaUrl', i) as string;
 				if (header) body.header_media = { url: header };
 			}

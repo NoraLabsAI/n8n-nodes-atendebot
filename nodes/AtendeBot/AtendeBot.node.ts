@@ -7,13 +7,14 @@ import type {
 import { NodeApiError, NodeConnectionTypes, NodeOperationError } from 'n8n-workflow';
 import { company } from './resources/company';
 import { contact } from './resources/contact';
+import { conversation } from './resources/conversation';
 import { deal } from './resources/deal';
 import { message } from './resources/message';
-import { loadOptionsMethods } from './resources/options';
+import { loadOptionsMethods, resourceMappingMethods } from './resources/options';
 import { task } from './resources/task';
 import type { ResourceDefinition } from './resources/types';
 
-const RESOURCES: Record<string, ResourceDefinition> = { contact, deal, message, task, company };
+const RESOURCES: Record<string, ResourceDefinition> = { contact, conversation, deal, message, task, company };
 
 export class AtendeBot implements INodeType {
 	description: INodeTypeDescription = {
@@ -23,7 +24,7 @@ export class AtendeBot implements INodeType {
 		group: ['transform'],
 		version: 1,
 		subtitle: '={{$parameter["operation"] + ": " + $parameter["resource"]}}',
-		description: 'Work with contacts, deals, messages and tasks in AtendeBot',
+		description: 'Work with contacts, conversations, deals, messages and tasks in AtendeBot',
 		defaults: { name: 'AtendeBot' },
 		usableAsTool: true,
 		inputs: [NodeConnectionTypes.Main],
@@ -39,6 +40,7 @@ export class AtendeBot implements INodeType {
 				options: [
 					{ name: 'Company', value: 'company' },
 					{ name: 'Contact', value: 'contact' },
+					{ name: 'Conversation', value: 'conversation' },
 					{ name: 'Deal', value: 'deal' },
 					{ name: 'Message', value: 'message' },
 					{ name: 'Task', value: 'task' },
@@ -48,7 +50,7 @@ export class AtendeBot implements INodeType {
 		],
 	};
 
-	methods = { loadOptions: loadOptionsMethods };
+	methods = { loadOptions: loadOptionsMethods, resourceMapping: resourceMappingMethods };
 
 	// Programmatic on purpose: the declarative style fires every item in parallel,
 	// which trips the 300 requests/minute limit on a spreadsheet import. Here items

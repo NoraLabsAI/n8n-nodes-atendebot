@@ -1,7 +1,7 @@
 # n8n-nodes-atendebot
 
 n8n community node for [AtendeBot](https://atende.bot): create and update contacts, deals,
-companies and tasks, and send WhatsApp messages from your workflows.
+companies and tasks, work with conversations, and send WhatsApp messages from your workflows.
 
 [Installation](#installation) · [Credentials](#credentials) · [Operations](#operations) · [AtendeBot Trigger](#atendebot-trigger) · [Behavior and limits](#behavior-and-limits) · [License](#license)
 
@@ -16,8 +16,10 @@ The node uses an AtendeBot API token.
 
 1. In AtendeBot open **Settings → API** and create a token.
 2. Give it only the scopes the workflow needs: `contacts:read`/`contacts:write`,
-   `cards:read`/`cards:write`, `companies:write`, `tasks:write`, `messages:write`, plus the read
-   scopes of the lists you pick from (pipelines, channels, agents, templates, tags).
+   `cards:read`/`cards:write`, `companies:write`, `tasks:write`, `messages:read`/`messages:write`,
+   `conversations:read`/`conversations:write`, `files:write` (to send a binary file), plus the read
+   scopes of the lists you pick from (pipelines, channels, agents, teams, templates, tags).
+   Start Chatbot needs both `conversations:write` and `messages:write`.
 3. In n8n create an **AtendeBot API** credential and paste the token. Leave **Base URL** as
    `https://api.atende.bot/public/v3` unless you were given another address. It must use https
    (plain http is accepted only for localhost).
@@ -37,13 +39,32 @@ The credential test calls `GET /me`, which accepts any valid token whatever its 
 | Deal | Update | Updates a deal. The pipeline picker only narrows the stage list. A deal cannot change pipeline. |
 | Deal | Move to Stage | Moves a deal to another stage. |
 | Deal | Get / Get Many | Gets one deal, or lists deals filtered by pipeline, stage, assignee, contact or company. |
-| Message | Send | Sends text, media (by URL) or an approved template to a contact (through a connected channel) or into a conversation. |
+| Deal | Add Note / Get Notes / Delete Note | Adds a note to the deal timeline, lists the notes, or deletes one. |
+| Deal | Duplicate | Copies a deal with a `(copy)` suffix. Custom field values are not copied. |
+| Deal | Delete | Deletes a deal for good, with its notes and tasks. The API demands a confirmation and this operation sends it. Output is `{ "deleted": true, "id": ... }`. |
+| Conversation | Get / Get Many | Gets one conversation (with the service window), or lists them. Filters: status, assignee, team, channel, network, provider, since. |
+| Conversation | Update | Changes status, assignee, team or classification. A Remove option sends the conversation back to the queue or clears the team or classification. |
+| Conversation | Close | Closes a conversation, with an optional classification. **Closing can send the satisfaction survey to the contact.** |
+| Conversation | Transfer | Moves a conversation to a team and/or an agent. The agent list follows the chosen team. A team alone also clears the assignee. |
+| Conversation | Add Note / Get Notes | Adds an internal note (never sent to the contact), or lists the notes. |
+| Conversation | Start Chatbot | Runs a published chatbot (trigger "Called by redirect") in a conversation. The API cannot list chatbots, so the chatbot is an ID you paste. |
+| Message | Get / Get Many | Gets one message or lists them (filter by conversation, since, oldest first). Each message carries its `delivery` status. |
+| Message | Send | Sends text, media (by URL or from a binary file) or an approved template to a contact (through a connected channel) or into a conversation. |
 | Task | Create | Creates a task, optionally linked to a deal and assigned to an agent. |
 | Company | Create or Update | Creates a company, or updates the one with the same name. |
 
 Pipelines, stages, connected channels, agents, templates (only the sendable ones) and tags are
 dropdowns loaded from your account. They walk every page, so long lists are complete. You can also
 pass an ID with an expression.
+
+Template variables are filled in by name: after you pick a template, the node lists one field for
+each variable and sends them in the order the template needs. When the template has no saved
+variable names, the fields are called `1`, `2`...
+
+**Media from a binary file.** The file is uploaded to AtendeBot first (`files:write`) and sent as a
+media message. The link AtendeBot gives is public, permanent and cannot be removed through the API, so
+do not send what must not be readable by anyone who gets the link. Audio is re-encoded by AtendeBot
+(16 MB limit). Each run uploads a new copy.
 
 The node can be used as a tool by AI agents.
 
@@ -82,6 +103,8 @@ events. The output is the whole event envelope (`event`, `data`, `tenant`, `time
   The "Retry" button in the executions list starts a **new** execution, so it is **not** protected:
   it can create the records again. If a retry fails with `IDEMPOTENCY_KEY_REUSE`, something in
   the body changed between attempts (an expression using `$now`, for example).
+- **Some writes are not protected.** The API has no `Idempotency-Key` for notes, Duplicate, file uploads and
+  Start Chatbot, so a retry of those can add a second note, copy or file.
 - **Output is the API response as is.** Create, update, move and send return the whole envelope
   (`data`, `warnings`, `failed`, `meta`). When part of a write could not be applied (a tag or a
   custom field that does not exist, for example), the record is still saved and `meta.partial` is

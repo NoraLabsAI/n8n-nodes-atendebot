@@ -5,14 +5,17 @@ export const showFor = (resource: string, ...operations: string[]) => ({
 	show: { resource: [resource], ...(operations.length ? { operation: operations } : {}) },
 });
 
-export const returnAllProperties = (resource: string): INodeProperties[] => [
+export const returnAllProperties = (
+	resource: string,
+	operations: string[] = ['getAll'],
+): INodeProperties[] => [
 	{
 		displayName: 'Return All',
 		name: 'returnAll',
 		type: 'boolean',
 		default: false,
 		description: 'Whether to return all results or only up to a given limit',
-		displayOptions: showFor(resource, 'getAll'),
+		displayOptions: showFor(resource, ...operations),
 	},
 	{
 		displayName: 'Limit',
@@ -21,7 +24,7 @@ export const returnAllProperties = (resource: string): INodeProperties[] => [
 		default: 50,
 		typeOptions: { minValue: 1 },
 		description: 'Max number of results to return',
-		displayOptions: { show: { resource: [resource], operation: ['getAll'], returnAll: [false] } },
+		displayOptions: { show: { resource: [resource], operation: operations, returnAll: [false] } },
 	},
 ];
 
