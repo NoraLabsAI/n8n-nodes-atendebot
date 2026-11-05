@@ -3,24 +3,31 @@
 n8n community node for [AtendeBot](https://atende.bot): create and update contacts, deals,
 companies and tasks, work with conversations, and send WhatsApp messages from your workflows.
 
-[Installation](#installation) · [Credentials](#credentials) · [Operations](#operations) · [AtendeBot Trigger](#atendebot-trigger) · [Behavior and limits](#behavior-and-limits) · [License](#license)
+[Installation](#installation) · [Credentials](#credentials) · [Operations](#operations) · [AtendeBot Trigger](#atendebot-trigger) · [Behavior and limits](#behavior-and-limits) · [Examples](#examples) · [Privacy](#privacy) · [Versioning](#versioning) · [Releasing](#releasing) · [License](#license)
 
 ## Installation
 
 Follow the [community nodes installation guide](https://docs.n8n.io/integrations/community-nodes/installation/)
 and install `n8n-nodes-atendebot`.
 
+**Where it runs.** On n8n Cloud, community nodes only appear after n8n has verified the node; until
+then it works on self-hosted n8n, where an owner or admin can install community nodes.
+
 ## Credentials
 
 The node uses an AtendeBot API token.
 
-1. In AtendeBot open **Settings → API** and create a token.
+1. In AtendeBot open **Ajustes > Integrações > Tokens** (the area was called **API e webhooks**
+   before it was renamed) and create a token. The in-app **n8n** preset fills in the scopes below.
 2. Give it only the scopes the workflow needs: `contacts:read`/`contacts:write`,
    `cards:read`/`cards:write`, `companies:write`, `tasks:write`, `messages:read`/`messages:write`,
    `conversations:read`/`conversations:write`, `files:write` (to send a binary file), plus the read
    scopes of the lists you pick from (pipelines, channels, agents, teams, templates, tags).
-   Start Chatbot needs both `conversations:write` and `messages:write`.
-3. In n8n create an **AtendeBot API** credential and paste the token. Leave **Base URL** as
+   Start Chatbot needs both `conversations:write` and `messages:write`. The AtendeBot Trigger
+   needs `webhooks:read` and `webhooks:write`.
+3. **Sending messages needs `messages:write`, which the in-app n8n preset leaves OFF.** Turn on
+   **Permitir enviar mensagens** on the token if the workflow sends messages or starts a chatbot.
+4. In n8n create an **AtendeBot API** credential and paste the token. Leave **Base URL** as
    `https://api.atende.bot/public/v3` unless you were given another address. It must use https
    (plain http is accepted only for localhost).
 
@@ -122,6 +129,40 @@ events. The output is the whole event envelope (`event`, `data`, `tenant`, `time
 - **Lists** stop at 10,000 records: the API refuses to page deeper. Narrow the filters instead.
 - **Errors** are shown in English with the API error code. The API's own message (in Portuguese)
   and details, such as the stage rules that blocked a move, are kept in the error description.
+
+## Examples
+
+Importable workflows in [`examples/`](examples) (n8n: **Import from File**, then pick your AtendeBot
+credential on each AtendeBot node). Each has a sticky note with the setup.
+
+- `lead-to-contact-and-deal.json`: a form post on a webhook creates or updates the contact and opens a deal.
+- `deal-won-notify-team.json`: when a deal is won, email the team with its title and value.
+- `conversation-closed-to-sheet.json`: when a conversation is completed, append a row to Google Sheets.
+
+## Privacy
+
+The node moves AtendeBot data (contacts, deals, conversations, messages) into **your own n8n
+instance**, and from there to whatever other nodes you connect. You decide where it goes and for how
+long it is kept (n8n execution data included), so you are the controller of that copy for LGPD and
+GDPR purposes. The package has no telemetry and calls only the AtendeBot API you configured.
+Each request carries a `User-Agent` with the package name and version.
+
+## Versioning
+
+[Semantic versioning](https://semver.org). Breaking changes (a renamed or removed operation or
+field, a changed output) only come in a major version; minor and patch versions stay compatible.
+Every request identifies the node as `n8n-nodes-atendebot/<version>` in the `User-Agent` header.
+
+## Releasing
+
+For maintainers. Publishing is done by GitHub Actions with npm provenance, with no token stored.
+
+1. Bump `version` in `package.json` **and** `VERSION` in `lib/version.ts` (a test fails if they differ).
+2. Commit, tag `v<version>` (for example `v0.1.0`) and push the commit and the tag.
+3. `.github/workflows/publish.yml` runs lint, build, the tests and `npm publish --provenance --access public`.
+
+One-time setup on npmjs.com: in the package settings, **Trusted Publisher** > GitHub Actions,
+organization `NoraLabsAI`, repository `n8n-nodes-atendebot`, workflow `publish.yml`, no environment.
 
 ## License
 

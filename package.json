@@ -3,7 +3,7 @@
 	"version": "0.1.0",
 	"description": "n8n community node for AtendeBot: contacts, deals, messages and tasks.",
 	"license": "MIT",
-	"homepage": "https://github.com/noralabs/n8n-nodes-atendebot",
+	"homepage": "https://github.com/NoraLabsAI/n8n-nodes-atendebot",
 	"keywords": [
 		"n8n-community-node-package"
 	],
@@ -13,7 +13,7 @@
 	},
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/noralabs/n8n-nodes-atendebot.git"
+		"url": "git+https://github.com/NoraLabsAI/n8n-nodes-atendebot.git"
 	},
 	"scripts": {
 		"build": "n8n-node build",

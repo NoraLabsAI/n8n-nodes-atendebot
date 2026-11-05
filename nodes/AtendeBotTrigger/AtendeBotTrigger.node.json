@@ -5,8 +5,8 @@
 	"categories": ["Sales", "Communication"],
 	"resources": {
 		"credentialDocumentation": [
-			{ "url": "https://github.com/noralabs/n8n-nodes-atendebot#credentials" }
+			{ "url": "https://github.com/NoraLabsAI/n8n-nodes-atendebot#credentials" }
 		],
-		"primaryDocumentation": [{ "url": "https://github.com/noralabs/n8n-nodes-atendebot#readme" }]
+		"primaryDocumentation": [{ "url": "https://github.com/NoraLabsAI/n8n-nodes-atendebot#readme" }]
 	}
 }
