@@ -12,6 +12,7 @@ import { type ApiErrorBody, describeApiError } from './errors';
 import { idempotencyKey } from './idempotency';
 import { fetchPages, type Page } from './pagination';
 import { type Query, withQuery } from './query';
+import { USER_AGENT } from './version';
 
 type Context = IExecuteFunctions | ILoadOptionsFunctions | IHookFunctions;
 
@@ -56,7 +57,8 @@ export const apiRequest = async (
 ): Promise<ApiResponse> => {
 	const credentials = await ctx.getCredentials('atendeBotApi');
 	const baseUrl = normalizeBaseUrl(String(credentials.baseUrl), ctx.getNode());
-	const headers: IDataObject = request.contentType ? { 'Content-Type': request.contentType } : {};
+	const headers: IDataObject = { 'User-Agent': USER_AGENT };
+	if (request.contentType) headers['Content-Type'] = request.contentType;
 	if (request.idempotent && itemIndex !== undefined) {
 		// An item index only exists when running an item, i.e. in an execute context.
 		const exec = ctx as IExecuteFunctions;

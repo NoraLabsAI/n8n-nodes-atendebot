@@ -8,6 +8,7 @@ vi.mock('n8n-workflow', async (importOriginal) => ({
 }));
 
 import { apiRequest } from '../lib/transport';
+import { USER_AGENT } from '../lib/version';
 
 type Reply = { statusCode: number; headers?: Record<string, string>; body?: unknown };
 type Options = { url: string; headers: Record<string, string>; ignoreHttpStatusErrors?: boolean };
@@ -38,6 +39,12 @@ describe('apiRequest', () => {
 		const { ctx, calls } = makeCtx([{ statusCode: 200 }]);
 		await apiRequest(ctx, { method: 'GET', path: '/me' }, 0);
 		expect(calls[0].ignoreHttpStatusErrors).toBe(true);
+	});
+
+	it('identifies the package and its version on every call', async () => {
+		const { ctx, calls } = makeCtx([{ statusCode: 200 }]);
+		await apiRequest(ctx, { method: 'GET', path: '/me' }, 0);
+		expect(calls[0].headers['User-Agent']).toBe(USER_AGENT);
 	});
 
 	it('builds the URL from the normalised base and repeats array query values', async () => {

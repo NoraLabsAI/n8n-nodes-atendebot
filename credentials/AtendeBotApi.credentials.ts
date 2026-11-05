@@ -5,6 +5,7 @@ import type {
 	Icon,
 	INodeProperties,
 } from 'n8n-workflow';
+import { USER_AGENT } from '../lib/version';
 
 export class AtendeBotApi implements ICredentialType {
 	name = 'atendeBotApi';
@@ -16,7 +17,7 @@ export class AtendeBotApi implements ICredentialType {
 		dark: 'file:../nodes/AtendeBot/atendebot.dark.svg',
 	};
 
-	documentationUrl = 'https://github.com/noralabs/n8n-nodes-atendebot#credentials';
+	documentationUrl = 'https://github.com/NoraLabsAI/n8n-nodes-atendebot#credentials';
 
 	properties: INodeProperties[] = [
 		{
@@ -26,7 +27,7 @@ export class AtendeBotApi implements ICredentialType {
 			typeOptions: { password: true },
 			required: true,
 			default: '',
-			description: 'Create it in AtendeBot under Settings, API',
+			description: 'Create it in AtendeBot under Settings, Integrations, Tokens',
 		},
 		{
 			displayName: 'Base URL',
@@ -48,6 +49,7 @@ export class AtendeBotApi implements ICredentialType {
 			baseURL: '={{$credentials.baseUrl.replace(/\\/+$/, "")}}',
 			url: '/me',
 			method: 'GET',
+			headers: { 'User-Agent': USER_AGENT },
 		},
 	};
 }
