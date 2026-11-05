@@ -1,10 +1,11 @@
 // Entry point of the hml end-to-end proofs (PLANO §6.5 items 3 and 4). Run on the server via e2e/run.sh.
-//   node e2e/run.mjs [--only actions|trigger]
+//   node e2e/run.mjs [--only actions|trigger|examples]
 import { readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { runActions } from './actions.mjs';
 import { createCredential, IMAGE, ownerSetupAndLogin, startN8n, stopN8n } from './n8n.mjs';
 import { BASE, HML, loadEnv, results } from './lib.mjs';
+import { runExamples } from './examples.mjs';
 import { runTrigger } from './trigger.mjs';
 
 const only = process.argv.includes('--only') ? process.argv[process.argv.indexOf('--only') + 1] : 'all';
@@ -25,6 +26,7 @@ try {
 	};
 	if (only === 'all' || only === 'actions') await runActions({ env, cred });
 	if (only === 'all' || only === 'trigger') await runTrigger({ env, cred });
+	if (only === 'all' || only === 'examples') await runExamples({ env, cred });
 } finally {
 	stopN8n();
 	const file = join(BASE, 'work/e2e-results.json');

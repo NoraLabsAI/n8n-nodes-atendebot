@@ -1,0 +1,92 @@
+{
+	"name": "AtendeBot: closed conversations to Google Sheets",
+	"nodes": [
+		{
+			"id": "Setup",
+			"name": "Setup",
+			"type": "n8n-nodes-base.stickyNote",
+			"typeVersion": 1,
+			"position": [
+				-20,
+				-40
+			],
+			"parameters": {
+				"content": "## Closed conversations to Google Sheets\nEach time a conversation is completed in AtendeBot, a row is appended to a sheet.\n\n1. Pick your **AtendeBot API** credential on the trigger. The token needs `webhooks:read`, `webhooks:write` and `conversations:read`.\n2. In **Append row**, pick your Google Sheets credential, the spreadsheet (replace `<SPREADSHEET_ID>`) and the tab. Give the first row of the tab the headers `Conversation ID`, `Contact`, `Phone` and `Closed at`.\n3. Activate the workflow. Your n8n needs a public https `WEBHOOK_URL`.",
+				"width": 520,
+				"height": 300
+			}
+		},
+		{
+			"id": "trigger",
+			"name": "Conversation completed",
+			"type": "n8n-nodes-atendebot.atendeBotTrigger",
+			"typeVersion": 1,
+			"position": [
+				0,
+				320
+			],
+			"parameters": {
+				"events": [
+					"conversation.completed"
+				],
+				"includeGroups": false
+			}
+		},
+		{
+			"id": "sheet",
+			"name": "Append row",
+			"type": "n8n-nodes-base.googleSheets",
+			"typeVersion": 4.5,
+			"position": [
+				260,
+				320
+			],
+			"parameters": {
+				"resource": "sheet",
+				"operation": "append",
+				"documentId": {
+					"__rl": true,
+					"mode": "id",
+					"value": "<SPREADSHEET_ID>"
+				},
+				"sheetName": {
+					"__rl": true,
+					"mode": "name",
+					"value": "Sheet1"
+				},
+				"columns": {
+					"mappingMode": "defineBelow",
+					"value": {
+						"Conversation ID": "={{ $json.data.conversation.id }}",
+						"Contact": "={{ $json.data.conversation.contact?.name ?? \"\" }}",
+						"Phone": "={{ $json.data.conversation.contact?.phone ?? \"\" }}",
+						"Closed at": "={{ $json.occurred_at }}"
+					},
+					"matchingColumns": [],
+					"schema": []
+				},
+				"options": {}
+			}
+		}
+	],
+	"connections": {
+		"Conversation completed": {
+			"main": [
+				[
+					{
+						"node": "Append row",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		}
+	},
+	"pinData": {},
+	"settings": {
+		"executionOrder": "v1"
+	},
+	"meta": {
+		"templateCredsSetupCompleted": false
+	}
+}

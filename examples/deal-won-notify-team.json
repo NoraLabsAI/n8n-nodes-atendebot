@@ -1,0 +1,74 @@
+{
+	"name": "AtendeBot: deal won, notify the team",
+	"nodes": [
+		{
+			"id": "Setup",
+			"name": "Setup",
+			"type": "n8n-nodes-base.stickyNote",
+			"typeVersion": 1,
+			"position": [
+				-20,
+				-40
+			],
+			"parameters": {
+				"content": "## Deal won, notify the team\nWhen a deal is marked as won in AtendeBot, an email with its title and value goes to your team.\n\n1. Pick your **AtendeBot API** credential on the trigger. The token needs `webhooks:read`, `webhooks:write` and `cards:read`.\n2. In **Send Email**, pick your SMTP credential and set the sender and recipient addresses.\n3. Activate the workflow. It creates the webhook in AtendeBot (your n8n needs a public https `WEBHOOK_URL`).",
+				"width": 520,
+				"height": 280
+			}
+		},
+		{
+			"id": "trigger",
+			"name": "Deal won",
+			"type": "n8n-nodes-atendebot.atendeBotTrigger",
+			"typeVersion": 1,
+			"position": [
+				0,
+				300
+			],
+			"parameters": {
+				"events": [
+					"card.won"
+				],
+				"includeGroups": false
+			}
+		},
+		{
+			"id": "email",
+			"name": "Send Email",
+			"type": "n8n-nodes-base.emailSend",
+			"typeVersion": 2.1,
+			"position": [
+				260,
+				300
+			],
+			"parameters": {
+				"fromEmail": "sales-bot@example.com",
+				"toEmail": "team@example.com",
+				"subject": "={{ \"Deal won: \" + $json.data.card.title }}",
+				"emailFormat": "text",
+				"text": "={{ \"The deal \" + $json.data.card.title + \" was won.\\nValue: \" + $json.data.card.value + \"\\nContact: \" + ($json.data.card.contact?.name ?? \"none\") }}",
+				"options": {}
+			}
+		}
+	],
+	"connections": {
+		"Deal won": {
+			"main": [
+				[
+					{
+						"node": "Send Email",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		}
+	},
+	"pinData": {},
+	"settings": {
+		"executionOrder": "v1"
+	},
+	"meta": {
+		"templateCredsSetupCompleted": false
+	}
+}

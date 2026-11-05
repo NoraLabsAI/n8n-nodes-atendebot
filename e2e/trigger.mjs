@@ -31,9 +31,9 @@ const envelope = () => ({
 });
 
 /** Signs exactly as deliverOnce in webhook-dispatch.service.ts: HMAC-SHA256 over the body, keyed with the secret string. */
-const sign = (body, secret) => `sha256=${createHmac('sha256', secret).update(body).digest('hex')}`;
+export const sign = (body, secret) => `sha256=${createHmac('sha256', secret).update(body).digest('hex')}`;
 
-const deliver = async (url, body, headers) => {
+export const deliver = async (url, body, headers) => {
 	const res = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', 'X-Atendebot-Event': 'contact.created', ...headers }, body });
 	return { status: res.status, text: (await res.text()).slice(0, 120) };
 };

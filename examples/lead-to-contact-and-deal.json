@@ -1,0 +1,106 @@
+{
+	"name": "AtendeBot: lead to contact and deal",
+	"nodes": [
+		{
+			"id": "Setup",
+			"name": "Setup",
+			"type": "n8n-nodes-base.stickyNote",
+			"typeVersion": 1,
+			"position": [
+				-20,
+				-40
+			],
+			"parameters": {
+				"content": "## Lead to contact and deal\nA form posts to this webhook, the contact is created (or updated by phone) in AtendeBot and a deal is opened for it.\n\n1. Pick your **AtendeBot API** credential on both AtendeBot nodes.\n2. In **Create deal**, choose the pipeline (replace `<PIPELINE_ID>`).\n3. Point your form at the production URL of the **Webhook** node. It must send JSON with `name`, `phone` (with country code, digits only), `email` and `value`.\n\nTry it with: `curl -X POST <webhook-url> -H \"Content-Type: application/json\" -d '{\"name\":\"Ana Souza\",\"phone\":\"5511999998888\",\"email\":\"ana@example.com\",\"value\":1500}'`",
+				"width": 520,
+				"height": 330
+			}
+		},
+		{
+			"id": "webhook",
+			"name": "Form post",
+			"type": "n8n-nodes-base.webhook",
+			"typeVersion": 2,
+			"position": [
+				0,
+				360
+			],
+			"parameters": {
+				"httpMethod": "POST",
+				"path": "atendebot-lead",
+				"options": {}
+			}
+		},
+		{
+			"id": "contact",
+			"name": "Create or update contact",
+			"type": "n8n-nodes-atendebot.atendeBot",
+			"typeVersion": 1,
+			"position": [
+				260,
+				360
+			],
+			"parameters": {
+				"resource": "contact",
+				"operation": "upsert",
+				"name": "={{ $json.body.name }}",
+				"phone": "={{ $json.body.phone }}",
+				"additionalFields": {
+					"email": "={{ $json.body.email }}"
+				}
+			}
+		},
+		{
+			"id": "deal",
+			"name": "Create deal",
+			"type": "n8n-nodes-atendebot.atendeBot",
+			"typeVersion": 1,
+			"position": [
+				520,
+				360
+			],
+			"parameters": {
+				"resource": "deal",
+				"operation": "create",
+				"title": "={{ \"Lead: \" + $(\"Form post\").item.json.body.name }}",
+				"pipeline": "<PIPELINE_ID>",
+				"stage": "",
+				"additionalFields": {
+					"value": "={{ Number($(\"Form post\").item.json.body.value) || 0 }}",
+					"contact": "={{ $json.data.id }}"
+				}
+			}
+		}
+	],
+	"connections": {
+		"Form post": {
+			"main": [
+				[
+					{
+						"node": "Create or update contact",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Create or update contact": {
+			"main": [
+				[
+					{
+						"node": "Create deal",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		}
+	},
+	"pinData": {},
+	"settings": {
+		"executionOrder": "v1"
+	},
+	"meta": {
+		"templateCredsSetupCompleted": false
+	}
+}
