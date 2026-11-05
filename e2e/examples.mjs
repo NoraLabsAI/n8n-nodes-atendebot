@@ -80,7 +80,7 @@ export const runExamples = async ({ env, cred }) => {
 		assert(exec.status === 'success', `execution ${exec.status}: ${exec.error?.message ?? ''} ${exec.error?.description ?? ''}`);
 		const contact = await hml(token, 'GET', `/contacts/phone:${phone}`);
 		assert(contact.status === 200 && contact.json.data.name === name, `contact ${contact.status} ${JSON.stringify(contact.json).slice(0, 200)}`);
-		const deals = await hmlAll(token, `/deals?contact=${contact.json.data.id}`);
+		const deals = await hmlAll(token, `/cards?contact=${contact.json.data.id}`);
 		assert(deals.length === 1 && deals[0].title === `Lead: ${name}` && Number(deals[0].value) === 1500, `deals ${JSON.stringify(deals).slice(0, 300)}`);
 		const created = itemsOf(exec, 'Create deal')[0];
 		assert(created?.data?.id === deals[0].id, 'the node output is not the deal in hml');
