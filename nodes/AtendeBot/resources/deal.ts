@@ -83,7 +83,7 @@ const createStage: INodeProperties = {
 	typeOptions: { loadOptionsMethod: 'getStages', loadOptionsDependsOn: ['pipeline'] },
 	default: '',
 	description:
-		'Leave empty for the first stage of the pipeline. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+		'Leave empty for the first stage of the pipeline. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
 	displayOptions: showFor(R, 'create'),
 };
 
@@ -94,7 +94,7 @@ const stagePipeline: INodeProperties = {
 	typeOptions: { loadOptionsMethod: 'getPipelines' },
 	default: '',
 	description:
-		'Only used to list the stages below, since a deal cannot change pipeline. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+		'Only used to list the stages below, since a deal cannot change pipeline. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
 	displayOptions: showFor(R, 'update', 'moveToStage'),
 };
 
@@ -117,7 +117,7 @@ const updateStage: INodeProperties = {
 	typeOptions: { loadOptionsMethod: 'getStages', loadOptionsDependsOn: ['stagePipeline'] },
 	default: '',
 	description:
-		'Leave empty to keep the current stage. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+		'Leave empty to keep the current stage. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
 	displayOptions: showFor(R, 'update'),
 };
 
