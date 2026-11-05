@@ -94,11 +94,11 @@ describe('apiRequest', () => {
 	it('does not send a key for reads, for non-idempotent calls, or without a real execution id', async () => {
 		const read = makeCtx([{ statusCode: 200 }]);
 		await apiRequest(read.ctx, { method: 'GET', path: '/contacts' }, 0);
-		expect(read.calls[0].headers).toEqual({});
+		expect(read.calls[0].headers).toEqual({ 'User-Agent': USER_AGENT });
 
 		const manual = makeCtx([{ statusCode: 200 }], '__UNKNOWN__');
 		await apiRequest(manual.ctx, { method: 'POST', path: '/contacts', idempotent: true }, 0);
-		expect(manual.calls[0].headers).toEqual({});
+		expect(manual.calls[0].headers).toEqual({ 'User-Agent': USER_AGENT });
 	});
 
 	it('returns a 404 only when the caller asked for it', async () => {
