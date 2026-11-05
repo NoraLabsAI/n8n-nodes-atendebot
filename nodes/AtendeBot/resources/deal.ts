@@ -1,0 +1,283 @@
+import type { IDataObject, IExecuteFunctions, INodeProperties } from 'n8n-workflow';
+import { contactRef, pathRef } from '../../../lib/refs';
+import { apiRequest, listAll } from '../../../lib/transport';
+import {
+	customFieldsOption,
+	mapFields,
+	readCustomFields,
+	readLimit,
+	returnAllProperties,
+	showFor,
+	toApiDate,
+} from './shared';
+import type { ResourceDefinition } from './types';
+
+const R = 'deal';
+
+const FIELD_NAMES = {
+	title: 'title',
+	contact: 'contact',
+	company: 'company',
+	assignee: 'assignee',
+	value: 'value',
+};
+
+const dealOptions = (): INodeProperties[] => [
+	{
+		displayName: 'Assignee Name or ID',
+		name: 'assignee',
+		type: 'options',
+		typeOptions: { loadOptionsMethod: 'getAgents' },
+		default: '',
+		description:
+			'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+	},
+	{
+		displayName: 'Company',
+		name: 'company',
+		type: 'string',
+		default: '',
+		description:
+			'ID or name of the company. A name with no match creates the company; a name that matches more than one fails.',
+	},
+	{
+		displayName: 'Contact',
+		name: 'contact',
+		type: 'string',
+		default: '',
+		description: 'ID of the contact, or phone:&lt;number&gt; with country code. This is the deal\'s main contact.',
+	},
+	customFieldsOption,
+	{
+		displayName: 'Due Date',
+		name: 'dueDate',
+		type: 'dateTime',
+		default: '',
+		description: 'Read in the workflow timezone unless the value carries its own',
+	},
+	{
+		displayName: 'Value',
+		name: 'value',
+		type: 'number',
+		typeOptions: { minValue: 0 },
+		default: 0,
+	},
+];
+
+const stageProperty = (name: string, dependsOn: string, ops: string[], required: boolean): INodeProperties => ({
+	displayName: 'Stage Name or ID',
+	name,
+	type: 'options',
+	description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+	required,
+	typeOptions: { loadOptionsMethod: 'getStages', loadOptionsDependsOn: [dependsOn] },
+	default: '',
+	description: required
+		? 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>'
+		: 'Leave empty for the first stage of the pipeline. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
+	displayOptions: showFor(R, ...ops),
+});
+
+const pipelineProperty = (name: string, ops: string[], forFilter: boolean): INodeProperties => ({
+	displayName: forFilter ? 'Pipeline (to List Stages)' : 'Pipeline',
+	name,
+	type: 'options',
+	description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+	required: !forFilter,
+	typeOptions: { loadOptionsMethod: 'getPipelines' },
+	default: '',
+	description: forFilter
+		? 'Only used to list the stages below. A deal cannot change pipeline.'
+		: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+	displayOptions: showFor(R, ...ops),
+});
+
+const dealId: INodeProperties = {
+	displayName: 'Deal ID',
+	name: 'dealId',
+	type: 'string',
+	required: true,
+	default: '',
+	displayOptions: showFor(R, 'get', 'update', 'moveToStage'),
+};
+
+export const deal: ResourceDefinition = {
+	properties: [
+		{
+			displayName: 'Operation',
+			name: 'operation',
+			type: 'options',
+			noDataExpression: true,
+			displayOptions: showFor(R),
+			default: 'create',
+			options: [
+				{ name: 'Create', value: 'create', action: 'Create a deal', description: 'Create a deal in a pipeline' },
+				{ name: 'Get', value: 'get', action: 'Get a deal', description: 'Get a deal by ID' },
+				{ name: 'Get Many', value: 'getAll', action: 'Get many deals', description: 'Get many deals' },
+				{ name: 'Move to Stage', value: 'moveToStage', action: 'Move a deal to a stage', description: 'Move a deal to another stage' },
+				{ name: 'Update', value: 'update', action: 'Update a deal', description: 'Update a deal' },
+			],
+		},
+		dealId,
+		{
+			displayName: 'Title',
+			name: 'title',
+			type: 'string',
+			required: true,
+			default: '',
+			displayOptions: showFor(R, 'create'),
+		},
+		pipelineProperty('pipeline', ['create'], false),
+		stageProperty('stage', 'pipeline', ['create'], false),
+		{
+			displayName: 'Additional Fields',
+			name: 'additionalFields',
+			type: 'collection',
+			placeholder: 'Add Field',
+			default: {},
+			displayOptions: showFor(R, 'create'),
+			options: dealOptions(),
+		},
+		pipelineProperty('stagePipeline', ['update', 'moveToStage'], true),
+		stageProperty('moveStage', 'stagePipeline', ['moveToStage'], true),
+		stageProperty('updateStage', 'stagePipeline', ['update'], false),
+		{
+			displayName: 'Update Fields',
+			name: 'updateFields',
+			type: 'collection',
+			placeholder: 'Add Field',
+			default: {},
+			displayOptions: showFor(R, 'update'),
+			options: [{ displayName: 'Title', name: 'title', type: 'string', default: '' }, ...dealOptions()],
+		},
+		...returnAllProperties(R),
+		{
+			displayName: 'Filters',
+			name: 'filters',
+			type: 'collection',
+			placeholder: 'Add Filter',
+			default: {},
+			displayOptions: showFor(R, 'getAll'),
+			options: [
+				{
+					displayName: 'Assignee Name or ID',
+					name: 'assignee',
+					type: 'options',
+					description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+					typeOptions: { loadOptionsMethod: 'getAgents' },
+					default: '',
+				},
+				{ displayName: 'Company ID', name: 'company', type: 'string', default: '' },
+				{
+					displayName: 'Contact',
+					name: 'contact',
+					type: 'string',
+					default: '',
+					description: 'ID of the main contact, or phone:&lt;number&gt;',
+				},
+				{
+					displayName: 'Pipeline Name or ID',
+					name: 'pipeline',
+					type: 'options',
+					description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+					typeOptions: { loadOptionsMethod: 'getPipelines' },
+					default: '',
+				},
+				{
+					displayName: 'Stage ID',
+					name: 'stage',
+					type: 'string',
+					default: '',
+					description: 'ID of the stage. List stages with the Pipelines endpoint or pick the pipeline above.',
+				},
+			],
+		},
+	],
+
+	operations: {
+		create: async (ctx, i) => {
+			const fields = ctx.getNodeParameter('additionalFields', i) as IDataObject;
+			const body = dealBody(ctx, fields, false);
+			body.title = ctx.getNodeParameter('title', i);
+			body.pipeline = ctx.getNodeParameter('pipeline', i);
+			const stage = ctx.getNodeParameter('stage', i) as string;
+			if (stage) body.stage = stage;
+			const { body: response } = await apiRequest(
+				ctx,
+				{ method: 'POST', path: '/cards', body, idempotent: true },
+				i,
+			);
+			return [response as IDataObject];
+		},
+
+		update: async (ctx, i) => {
+			const body = dealBody(ctx, ctx.getNodeParameter('updateFields', i) as IDataObject, true);
+			const stage = ctx.getNodeParameter('updateStage', i) as string;
+			if (stage) body.stage = stage;
+			const { body: response } = await apiRequest(
+				ctx,
+				{ method: 'PATCH', path: `/cards/${pathRef(ctx.getNodeParameter('dealId', i) as string)}`, body },
+				i,
+			);
+			return [response as IDataObject];
+		},
+
+		moveToStage: async (ctx, i) => {
+			const { body: response } = await apiRequest(
+				ctx,
+				{
+					method: 'PATCH',
+					path: `/cards/${pathRef(ctx.getNodeParameter('dealId', i) as string)}`,
+					body: { stage: ctx.getNodeParameter('moveStage', i) as string },
+				},
+				i,
+			);
+			return [response as IDataObject];
+		},
+
+		get: async (ctx, i) => {
+			const { status, body } = await apiRequest(
+				ctx,
+				{
+					method: 'GET',
+					path: `/cards/${pathRef(ctx.getNodeParameter('dealId', i) as string)}`,
+					notFoundOk: true,
+				},
+				i,
+			);
+			return status === 404 ? [] : [body as IDataObject];
+		},
+
+		getAll: async (ctx, i) => {
+			const filters = ctx.getNodeParameter('filters', i) as IDataObject;
+			return listAll<IDataObject>(
+				ctx,
+				'/cards',
+				{
+					pipeline: filters.pipeline as string,
+					stage: filters.stage as string,
+					assignee: filters.assignee as string,
+					contact: filters.contact ? contactRef(filters.contact as string) : undefined,
+					company: filters.company as string,
+				},
+				readLimit(ctx, i),
+				i,
+			);
+		},
+	},
+};
+
+const dealBody = (
+	ctx: IExecuteFunctions,
+	fields: IDataObject,
+	clearEmpty: boolean,
+): IDataObject => {
+	const body = mapFields(fields, FIELD_NAMES, clearEmpty);
+	if (typeof body.contact === 'string') body.contact = contactRef(body.contact);
+	const customFields = readCustomFields(fields.customFields);
+	if (customFields) body.custom_fields = customFields;
+	if (fields.dueDate !== undefined) {
+		body.due_date = fields.dueDate === '' ? null : toApiDate(ctx, fields.dueDate as string);
+	}
+	return body;
+};
