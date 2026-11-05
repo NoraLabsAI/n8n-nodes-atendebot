@@ -1,0 +1,85 @@
+{
+	"name": "e2e err message binary",
+	"nodes": [
+		{
+			"id": "manual",
+			"name": "Manual",
+			"type": "n8n-nodes-base.manualTrigger",
+			"typeVersion": 1,
+			"position": [
+				0,
+				0
+			],
+			"parameters": {}
+		},
+		{
+			"id": "make-a-file",
+			"name": "Make a file",
+			"type": "n8n-nodes-base.code",
+			"typeVersion": 2,
+			"position": [
+				220,
+				0
+			],
+			"parameters": {
+				"jsCode": "const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');\nreturn [{ json: {}, binary: { data: await this.helpers.prepareBinaryData(png, 'pixel.png', 'image/png') } }];"
+			}
+		},
+		{
+			"id": "send-the-file",
+			"name": "Send the file",
+			"type": "n8n-nodes-atendebot.atendeBot",
+			"typeVersion": 1,
+			"position": [
+				440,
+				0
+			],
+			"parameters": {
+				"resource": "message",
+				"operation": "send",
+				"destination": "conversation",
+				"conversation": "00000000-0000-4000-8000-000000000000",
+				"messageType": "mediaBinary",
+				"binaryProperty": "data",
+				"binaryMediaType": "auto",
+				"mediaFilename": "",
+				"caption": "hello",
+				"options": {}
+			},
+			"credentials": {
+				"atendeBotApi": {
+					"id": "__CRED_MAIN__",
+					"name": "main"
+				}
+			}
+		}
+	],
+	"connections": {
+		"Manual": {
+			"main": [
+				[
+					{
+						"node": "Make a file",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Make a file": {
+			"main": [
+				[
+					{
+						"node": "Send the file",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		}
+	},
+	"settings": {
+		"timezone": "America/Sao_Paulo",
+		"executionOrder": "v1"
+	}
+}

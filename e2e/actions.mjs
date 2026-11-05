@@ -41,6 +41,8 @@ export const runActions = async ({ env, cred }) => {
 		pipeline: pipeline.id,
 		stage2: stage2.id,
 		agent: agent.id,
+		team: (await hmlAll(token, '/teams'))[0].id,
+		classification: (await hml(token, 'GET', '/conversations/classifications')).json.data[0].classification_options[0].id,
 		tagA: await ensureTag(token, 'n8n-a'),
 		tagB: await ensureTag(token, 'n8n-b'),
 		tagBulk: await ensureTag(token, `n8n-bulk-${tag}`),
@@ -252,6 +254,114 @@ export const runActions = async ({ env, cred }) => {
 	await errorCase('ACT-err-message-conversation', 'Message Send, error path: unknown conversation', 'errMessageConversation', 'NOT_FOUND');
 	record('ACT-message-send-ok', 'Message Send success path (text, media, template)', 'NOT PROVEN', 'the test account has no connected UazAPI channel (GET /channels is empty), so no message can be delivered; only the error paths above ran');
 
+	// --- F1e: deal notes, duplicate, delete -------------------------------------------------------------------
+	await check('ACT-deal-notes-duplicate-delete', 'Deal: Add Note, Get Notes, Delete Note, Duplicate, Delete (the copy), checked against the API afterwards', async () => {
+		const exec = await run('dealExtras');
+		ok(exec);
+		const one = (node) => itemsOf(exec, node);
+		const note = one('Add note')[0];
+		assert(note.data.id && note.data.text === `${c.tag} note from the n8n e2e` && note.data.author?.type === 'token', `note ${short(note.data)}`);
+		assert(one('Get notes').some((n) => n.id === note.data.id), 'the note is not in Get Notes');
+		const deleted = one('Delete note')[0];
+		assert(deleted.deleted === true && deleted.id === note.data.id, `delete note output ${short(deleted)}`);
+		assert(!one('Get notes after delete').some((n) => n.id === note.data.id), 'the note is still listed after Delete Note');
+		const copy = one('Duplicate deal')[0];
+		assert(copy.data.id !== c.dealId && /\(copy\)$/.test(copy.data.title), `copy ${short(copy.data)}`);
+		assert(one('Delete copy')[0].deleted === true, 'delete output');
+		assert((await hml(token, 'GET', `/cards/${copy.data.id}`)).status === 404, 'the copy still exists');
+		assert((await hml(token, 'GET', `/cards/${c.dealId}`)).status === 200, 'the original was deleted too');
+		return `exec ${exec.id}: note ${note.data.id} added (author token), listed, deleted and gone; copy ${copy.data.id} "${copy.data.title}" created, deleted (GET -> 404), original ${c.dealId} untouched`;
+	});
+	await errorCase('ACT-err-deal-note-missing', 'Error: Delete Note on a note that does not exist', 'errDealNote', 'NOT_FOUND');
+	await errorCase('ACT-err-deal-delete-missing', 'Error: Delete on a deal that does not exist', 'errDealDelete', 'NOT_FOUND');
+	await errorCase('ACT-err-deal-duplicate-missing', 'Error: Duplicate on a deal that does not exist', 'errDealDuplicate', 'NOT_FOUND');
+
+	// --- F1e: conversations ----------------------------------------------------------------------------------------
+	await check('ACT-conv-dropdowns', 'Conversation dropdowns: teams, classifications (group: option), agents filtered by the chosen team', async () => {
+		const bot = 'n8n-nodes-atendebot.atendeBot';
+		const current = { resource: 'conversation', operation: 'transfer' };
+		const teamsOut = await options(bot, 'getTeams', current);
+		assert(teamsOut.some((o) => o.value === c.team), 'team missing');
+		const classOut = await options(bot, 'getClassifications', { resource: 'conversation', operation: 'close' });
+		assert(classOut.some((o) => o.value === c.classification && o.name.includes(': ')), `classification missing: ${short(classOut, 200)}`);
+		const allAgents = await options(bot, 'getAgents', current);
+		const ofTeam = await options(bot, 'getAgents', { ...current, transferTeam: c.team });
+		const apiOfTeam = (await hmlAll(token, `/agents?team=${c.team}`)).filter((a) => !a.removed_at).length;
+		assert(ofTeam.length - 1 === apiOfTeam, `node lists ${ofTeam.length - 1} agents of the team, the API ${apiOfTeam}`);
+		assert(allAgents.some((o) => o.value === agent.id), 'unfiltered list misses the agent');
+		return `teams ${teamsOut.length - 1}, classifications ${classOut.length - 1}, agents ${allAgents.length - 1} unfiltered and ${ofTeam.length - 1} for the team (the API says ${apiOfTeam})`;
+	});
+
+	await check('ACT-conv-reads-empty', 'Conversation: Get on a missing id returns no item; Get Many with every filter (status, team, network, provider, since) answers 200 with none', async () => {
+		const exec = await run('convReads');
+		ok(exec);
+		assert(itemsOf(exec, 'Get missing conversation').length === 0 && itemsOf(exec, 'List conversations').length === 0, 'expected no items');
+		return `exec ${exec.id}: success, 0 items from both (the account has no conversations, so this proves the request is accepted with those filters, not the data shape)`;
+	});
+	await errorCase('ACT-err-conv-update-missing', 'Conversation Update, error path: unknown conversation', 'errConvUpdate', 'NOT_FOUND');
+	await errorCase('ACT-err-conv-update-empty', 'Conversation Update, error path: nothing to update', 'errConvUpdateEmpty', 'INVALID_REQUEST');
+	await errorCase('ACT-err-conv-close-missing', 'Conversation Close, error path: unknown conversation', 'errConvClose', 'NOT_FOUND');
+	await errorCase('ACT-err-conv-transfer-missing', 'Conversation Transfer, error path: unknown conversation', 'errConvTransfer', 'NOT_FOUND');
+	await check('ACT-err-conv-transfer-none', 'Conversation Transfer, error path: neither team nor agent chosen', async () => {
+		const exec = await run('errConvTransferNone');
+		const message = failed(exec);
+		assert(message.includes('Choose a team, an agent, or both'), message);
+		return `exec ${exec.id}: ${message}`;
+	});
+	await errorCase('ACT-err-conv-note-missing', 'Conversation Add Note, error path: unknown conversation', 'errConvNote', 'NOT_FOUND');
+	await errorCase('ACT-err-conv-notes-missing', 'Conversation Get Notes, error path: unknown conversation', 'errConvNotes', 'NOT_FOUND');
+	await errorCase('ACT-err-conv-chatbot-missing', 'Conversation Start Chatbot, error path: unknown conversation', 'errConvChatbot', 'NOT_FOUND');
+	record('ACT-conv-success', 'Conversation success paths: Get, Get Many with data, Update, Close, Transfer, Add Note, Get Notes, Start Chatbot', 'NOT PROVEN', 'the test account has no conversation (it has no connected channel); the owner proves these in production');
+
+	// --- F1e: messages ------------------------------------------------------------------------------------------------------
+	await check('ACT-msg-reads-empty', 'Message: Get on a missing id returns no item; Get Many (oldest first, since) answers 200 with none', async () => {
+		const exec = await run('msgReads');
+		ok(exec);
+		assert(itemsOf(exec, 'Get missing message').length === 0 && itemsOf(exec, 'List messages').length === 0, 'expected no items');
+		return `exec ${exec.id}: success, 0 items from both (no messages on this account)`;
+	});
+	await errorCase('ACT-err-msg-list-conversation', 'Message Get Many, error path: unknown conversation filter', 'errMsgListConversation', 'NOT_FOUND');
+	record('ACT-msg-reads-ok', 'Message Get and Get Many with data, including the delivery status', 'NOT PROVEN', 'the test account has no messages; the owner proves these in production');
+
+	await check('ACT-template-loader', 'Template variables loader: no template gives no fields, a missing template is refused, the template dropdown is empty on this account', async () => {
+		const mapper = async (template) => api('POST', '/rest/dynamic-node-parameters/resource-mapper-fields', {
+			path: 'parameters.templateVariables',
+			nodeTypeAndVersion: { name: 'n8n-nodes-atendebot.atendeBot', version: 1 },
+			currentNodeParameters: { resource: 'message', operation: 'send', messageType: 'template', template },
+			credentials: { atendeBotApi: { id: cred.main, name: 'main' } },
+			methodName: 'getTemplateVariables',
+		});
+		const none = await mapper('');
+		assert(none.status === 200 && none.json.data.fields.length === 0, `no template: ${none.status} ${short(none.json, 200)}`);
+		const missing = await mapper('00000000-0000-4000-8000-000000000000');
+		assert(missing.status !== 200 && JSON.stringify(missing.json).includes('NOT_FOUND'), `missing template: ${missing.status} ${short(missing.json, 300)}`);
+		const templatesOut = await options('n8n-nodes-atendebot.atendeBot', 'getTemplates', { resource: 'message', operation: 'send', channel: '' });
+		assert(templatesOut.length === 0, `templates ${templatesOut.length}`);
+		return `no template -> 0 fields; missing template -> ${missing.status} ${String(missing.json?.message ?? '').slice(0, 120)}; template dropdown -> ${templatesOut.length} (the account has no templates)`;
+	});
+	await errorCase('ACT-err-msg-template-missing', 'Message Send with a template, error path: the template is looked up first and a missing one is refused', 'errMsgTemplate', 'NOT_FOUND');
+	record('ACT-template-variables-ok', 'Template variables by name: fields named after the variables, values sent in template order', 'NOT PROVEN', 'the account has no template to load; the ordering and the fallback names are covered by test/templateVariables.test.ts, the owner proves the loader and the send in production');
+
+	await check('ACT-binary-upload', 'Message Send from a binary file: the node uploads it (POST /files answers 201, multipart accepted) and then sends; the send is refused for the unknown conversation', async () => {
+		const startedAt = new Date(Date.now() - 2000).toISOString();
+		const exec = await run('errMsgBinary');
+		const message = failed(exec);
+		assert(message.includes('[NOT_FOUND]'), `expected the send to fail with NOT_FOUND: ${message}`);
+		const calls = (await apiLogs(env)).filter((l) => l.created_at >= startedAt && l.token_name?.includes('full'));
+		const upload = calls.find((l) => l.method === 'POST' && l.path.endsWith('/files'));
+		const send = calls.find((l) => l.method === 'POST' && l.path.endsWith('/messages'));
+		assert(upload?.status_code === 201, `upload in api_logs: ${short(upload)}`);
+		assert(send?.status_code === 404 && send.created_at >= upload.created_at, `send in api_logs: ${short(send)}`);
+		return `exec ${exec.id}: api_logs shows POST /files ${upload.status_code} then POST /messages ${send.status_code}; node error: ${message}`;
+	});
+	await check('ACT-err-msg-binary-missing', 'Message Send from a binary file, error path: the item has no such binary property', async () => {
+		const exec = await run('errMsgBinaryMissing');
+		const message = failed(exec);
+		assert(/binary/i.test(message) && !/[áéíóúãõçÁÉÍÓÚÃÕÇ]/.test(message), message);
+		return `exec ${exec.id}: ${message}`;
+	});
+	record('ACT-binary-send-ok', 'Message Send from a binary file delivered to a contact (and the type detected from the file)', 'NOT PROVEN', 'no connected channel, so nothing can be delivered; the upload call itself is proven above and the owner proves the delivery in production');
+
 	// --- 300+ items and the 429 -------------------------------------------------------------------------------------------
 	await check('ACT-bulk-429', `${BULK} items: a 429 is waited out, every item succeeds, no duplicates`, async () => {
 		// Spend the account's 300 requests/minute first so the node's first calls meet a 429.
@@ -301,6 +411,14 @@ export const runActions = async ({ env, cred }) => {
 			? 'answers 200 now: the API was fixed'
 			: `${wide.status} ${JSON.stringify(wide.json).slice(0, 220)}; the route feeds the matched ids to q.in("id", ids), so 320 UUIDs end up in the URL; the node shows it as [INTERNAL_ERROR]; not worked around in the package`,
 	);
+};
+
+/** The last API calls of this account (the app's audit log), newest first. */
+const apiLogs = async (env) => {
+	const login = await fetch(`${HML_APP_API}/auth/login`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: env.E2E_EMAIL, password: env.E2E_PASSWORD }) });
+	const { accessToken } = await login.json();
+	const r = await fetch(`${HML_APP_API}/audit/api-logs?limit=100`, { headers: { authorization: `Bearer ${accessToken}` } });
+	return r.json();
 };
 
 /** Counts the 429s the API logged for this account, when the log is readable. Best effort. */

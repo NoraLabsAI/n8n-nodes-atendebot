@@ -1,0 +1,55 @@
+{
+	"name": "e2e err conversation chatbot",
+	"nodes": [
+		{
+			"id": "manual",
+			"name": "Manual",
+			"type": "n8n-nodes-base.manualTrigger",
+			"typeVersion": 1,
+			"position": [
+				0,
+				0
+			],
+			"parameters": {}
+		},
+		{
+			"id": "chatbot-on-missing",
+			"name": "Chatbot on missing",
+			"type": "n8n-nodes-atendebot.atendeBot",
+			"typeVersion": 1,
+			"position": [
+				220,
+				0
+			],
+			"parameters": {
+				"resource": "conversation",
+				"operation": "startChatbot",
+				"conversationId": "00000000-0000-4000-8000-000000000000",
+				"chatbot": "00000000-0000-4000-8000-000000000000"
+			},
+			"credentials": {
+				"atendeBotApi": {
+					"id": "__CRED_MAIN__",
+					"name": "main"
+				}
+			}
+		}
+	],
+	"connections": {
+		"Manual": {
+			"main": [
+				[
+					{
+						"node": "Chatbot on missing",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		}
+	},
+	"settings": {
+		"timezone": "America/Sao_Paulo",
+		"executionOrder": "v1"
+	}
+}

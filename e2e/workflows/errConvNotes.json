@@ -1,0 +1,55 @@
+{
+	"name": "e2e err conversation notes",
+	"nodes": [
+		{
+			"id": "manual",
+			"name": "Manual",
+			"type": "n8n-nodes-base.manualTrigger",
+			"typeVersion": 1,
+			"position": [
+				0,
+				0
+			],
+			"parameters": {}
+		},
+		{
+			"id": "notes-of-missing",
+			"name": "Notes of missing",
+			"type": "n8n-nodes-atendebot.atendeBot",
+			"typeVersion": 1,
+			"position": [
+				220,
+				0
+			],
+			"parameters": {
+				"resource": "conversation",
+				"operation": "getNotes",
+				"conversationId": "00000000-0000-4000-8000-000000000000",
+				"returnAll": true
+			},
+			"credentials": {
+				"atendeBotApi": {
+					"id": "__CRED_MAIN__",
+					"name": "main"
+				}
+			}
+		}
+	],
+	"connections": {
+		"Manual": {
+			"main": [
+				[
+					{
+						"node": "Notes of missing",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		}
+	},
+	"settings": {
+		"timezone": "America/Sao_Paulo",
+		"executionOrder": "v1"
+	}
+}

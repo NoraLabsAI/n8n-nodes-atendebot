@@ -15,6 +15,8 @@ const node = (name, type, parameters = {}, extra = {}) => ({
 	...extra,
 });
 
+const ZERO = '00000000-0000-4000-8000-000000000000';
+
 export const CRED = { main: '__CRED_MAIN__', limited: '__CRED_LIMITED__', bad: '__CRED_BAD__' };
 
 const bot = (name, parameters, { cred = 'main', ...extra } = {}) =>
@@ -315,12 +317,106 @@ export const buildWorkflows = (c) => ({
 			options: {},
 		}),
 	]),
+	// --- deal notes, duplicate, delete -----------------------------------------------------------------
+	dealExtras: workflow('e2e deal extras', [
+		manual(),
+		bot('Add note', { resource: 'deal', operation: 'addNote', dealId: c.dealId, noteText: `${c.tag} note from the n8n e2e` }),
+		bot('Get notes', { resource: 'deal', operation: 'getNotes', dealId: c.dealId, returnAll: true }),
+		bot('Delete note', { resource: 'deal', operation: 'deleteNote', dealId: c.dealId, noteId: "={{ $('Add note').first().json.data.id }}" }),
+		bot('Get notes after delete', { resource: 'deal', operation: 'getNotes', dealId: c.dealId, returnAll: false, limit: 5 }),
+		bot('Duplicate deal', { resource: 'deal', operation: 'duplicate', dealId: c.dealId }),
+		bot('Delete copy', { resource: 'deal', operation: 'delete', dealId: "={{ $('Duplicate deal').first().json.data.id }}" }),
+	]),
+	errDealNote: workflow('e2e err deal note', [
+		manual(),
+		bot('Delete missing note', { resource: 'deal', operation: 'deleteNote', dealId: c.dealId, noteId: ZERO }),
+	]),
+	errDealDelete: workflow('e2e err deal delete', [
+		manual(),
+		bot('Delete missing deal', { resource: 'deal', operation: 'delete', dealId: ZERO }),
+	]),
+	errDealDuplicate: workflow('e2e err deal duplicate', [
+		manual(),
+		bot('Duplicate missing deal', { resource: 'deal', operation: 'duplicate', dealId: ZERO }),
+	]),
+
+	// --- conversations: the account has none, so reads are empty and writes are refused ------------------
+	convReads: workflow('e2e conversation reads', [
+		manual(),
+		bot('Get missing conversation', { resource: 'conversation', operation: 'get', conversationId: ZERO }),
+		bot('List conversations', { resource: 'conversation', operation: 'getAll', returnAll: true, filters: { status: 'open', team: c.team, network: 'whatsapp', provider: 'uazapi', since: '2026-01-01T00:00:00' } }),
+	], { fan: true }),
+	errConvUpdate: workflow('e2e err conversation update', [
+		manual(),
+		bot('Update missing', { resource: 'conversation', operation: 'update', conversationId: ZERO, updateFields: { status: 'open', clearTeam: true } }),
+	]),
+	errConvUpdateEmpty: workflow('e2e err conversation update empty', [
+		manual(),
+		bot('Update with nothing', { resource: 'conversation', operation: 'update', conversationId: ZERO, updateFields: {} }),
+	]),
+	errConvClose: workflow('e2e err conversation close', [
+		manual(),
+		bot('Close missing', { resource: 'conversation', operation: 'close', conversationId: ZERO, closeClassification: c.classification }),
+	]),
+	errConvTransfer: workflow('e2e err conversation transfer', [
+		manual(),
+		bot('Transfer missing', { resource: 'conversation', operation: 'transfer', conversationId: ZERO, transferTeam: c.team, transferAgent: c.agent }),
+	]),
+	errConvTransferNone: workflow('e2e err conversation transfer none', [
+		manual(),
+		bot('Transfer to nobody', { resource: 'conversation', operation: 'transfer', conversationId: ZERO, transferTeam: '', transferAgent: '' }),
+	]),
+	errConvNote: workflow('e2e err conversation note', [
+		manual(),
+		bot('Note on missing', { resource: 'conversation', operation: 'addNote', conversationId: ZERO, noteText: 'x' }),
+	]),
+	errConvNotes: workflow('e2e err conversation notes', [
+		manual(),
+		bot('Notes of missing', { resource: 'conversation', operation: 'getNotes', conversationId: ZERO, returnAll: true }),
+	]),
+	errConvChatbot: workflow('e2e err conversation chatbot', [
+		manual(),
+		bot('Chatbot on missing', { resource: 'conversation', operation: 'startChatbot', conversationId: ZERO, chatbot: ZERO }),
+	]),
+
+	// --- messages: get, list, binary file, template variables ----------------------------------------------
+	msgReads: workflow('e2e message reads', [
+		manual(),
+		bot('Get missing message', { resource: 'message', operation: 'get', messageId: ZERO }),
+		bot('List messages', { resource: 'message', operation: 'getAll', returnAll: true, filters: { oldestFirst: true, since: '2026-01-01T00:00:00' } }),
+	], { fan: true }),
+	errMsgListConversation: workflow('e2e err message list conversation', [
+		manual(),
+		bot('List of missing conversation', { resource: 'message', operation: 'getAll', returnAll: false, limit: 5, filters: { conversation: ZERO } }),
+	]),
+	errMsgTemplate: workflow('e2e err message template', [
+		manual(),
+		bot('Send missing template', {
+			resource: 'message', operation: 'send', destination: 'conversation', conversation: ZERO,
+			messageType: 'template', template: ZERO, templateVariables: { mappingMode: 'defineBelow', value: { first_name: 'Ana' } }, headerMediaUrl: '', options: {},
+		}),
+	]),
+	errMsgBinary: workflow('e2e err message binary', [
+		manual(),
+		code('Make a file', "const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');\nreturn [{ json: {}, binary: { data: await this.helpers.prepareBinaryData(png, 'pixel.png', 'image/png') } }];"),
+		bot('Send the file', {
+			resource: 'message', operation: 'send', destination: 'conversation', conversation: ZERO,
+			messageType: 'mediaBinary', binaryProperty: 'data', binaryMediaType: 'auto', mediaFilename: '', caption: 'hello', options: {},
+		}),
+	]),
+	errMsgBinaryMissing: workflow('e2e err message binary missing', [
+		manual(),
+		bot('Send without a file', {
+			resource: 'message', operation: 'send', destination: 'conversation', conversation: ZERO,
+			messageType: 'mediaBinary', binaryProperty: 'data', binaryMediaType: 'auto', mediaFilename: '', caption: '', options: {},
+		}),
+	]),
 });
 
 /** Placeholder context for the committed copies of the workflows. */
 export const placeholderContext = () => {
 	const ctx = {};
-	for (const key of ['tag', 'phoneA', 'phonePartial', 'phoneLoop', 'phoneFive', 'phoneReplay', 'phoneReuse', 'phoneBulk', 'phoneScope', 'pipeline', 'stage2', 'agent', 'dealId', 'tagA', 'tagB', 'tagBulk']) {
+	for (const key of ['tag', 'phoneA', 'phonePartial', 'phoneLoop', 'phoneFive', 'phoneReplay', 'phoneReuse', 'phoneBulk', 'phoneScope', 'pipeline', 'stage2', 'agent', 'dealId', 'tagA', 'tagB', 'tagBulk', 'team', 'classification']) {
 		ctx[key] = `{{${key}}}`;
 	}
 	ctx.bulkCount = 320;

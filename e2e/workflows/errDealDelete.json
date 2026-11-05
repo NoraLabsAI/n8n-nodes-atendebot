@@ -1,0 +1,54 @@
+{
+	"name": "e2e err deal delete",
+	"nodes": [
+		{
+			"id": "manual",
+			"name": "Manual",
+			"type": "n8n-nodes-base.manualTrigger",
+			"typeVersion": 1,
+			"position": [
+				0,
+				0
+			],
+			"parameters": {}
+		},
+		{
+			"id": "delete-missing-deal",
+			"name": "Delete missing deal",
+			"type": "n8n-nodes-atendebot.atendeBot",
+			"typeVersion": 1,
+			"position": [
+				220,
+				0
+			],
+			"parameters": {
+				"resource": "deal",
+				"operation": "delete",
+				"dealId": "00000000-0000-4000-8000-000000000000"
+			},
+			"credentials": {
+				"atendeBotApi": {
+					"id": "__CRED_MAIN__",
+					"name": "main"
+				}
+			}
+		}
+	],
+	"connections": {
+		"Manual": {
+			"main": [
+				[
+					{
+						"node": "Delete missing deal",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		}
+	},
+	"settings": {
+		"timezone": "America/Sao_Paulo",
+		"executionOrder": "v1"
+	}
+}

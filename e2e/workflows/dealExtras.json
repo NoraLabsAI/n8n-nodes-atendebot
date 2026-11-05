@@ -1,0 +1,219 @@
+{
+	"name": "e2e deal extras",
+	"nodes": [
+		{
+			"id": "manual",
+			"name": "Manual",
+			"type": "n8n-nodes-base.manualTrigger",
+			"typeVersion": 1,
+			"position": [
+				0,
+				0
+			],
+			"parameters": {}
+		},
+		{
+			"id": "add-note",
+			"name": "Add note",
+			"type": "n8n-nodes-atendebot.atendeBot",
+			"typeVersion": 1,
+			"position": [
+				220,
+				0
+			],
+			"parameters": {
+				"resource": "deal",
+				"operation": "addNote",
+				"dealId": "{{dealId}}",
+				"noteText": "{{tag}} note from the n8n e2e"
+			},
+			"credentials": {
+				"atendeBotApi": {
+					"id": "__CRED_MAIN__",
+					"name": "main"
+				}
+			}
+		},
+		{
+			"id": "get-notes",
+			"name": "Get notes",
+			"type": "n8n-nodes-atendebot.atendeBot",
+			"typeVersion": 1,
+			"position": [
+				440,
+				0
+			],
+			"parameters": {
+				"resource": "deal",
+				"operation": "getNotes",
+				"dealId": "{{dealId}}",
+				"returnAll": true
+			},
+			"credentials": {
+				"atendeBotApi": {
+					"id": "__CRED_MAIN__",
+					"name": "main"
+				}
+			}
+		},
+		{
+			"id": "delete-note",
+			"name": "Delete note",
+			"type": "n8n-nodes-atendebot.atendeBot",
+			"typeVersion": 1,
+			"position": [
+				660,
+				0
+			],
+			"parameters": {
+				"resource": "deal",
+				"operation": "deleteNote",
+				"dealId": "{{dealId}}",
+				"noteId": "={{ $('Add note').first().json.data.id }}"
+			},
+			"credentials": {
+				"atendeBotApi": {
+					"id": "__CRED_MAIN__",
+					"name": "main"
+				}
+			}
+		},
+		{
+			"id": "get-notes-after-delete",
+			"name": "Get notes after delete",
+			"type": "n8n-nodes-atendebot.atendeBot",
+			"typeVersion": 1,
+			"position": [
+				880,
+				0
+			],
+			"parameters": {
+				"resource": "deal",
+				"operation": "getNotes",
+				"dealId": "{{dealId}}",
+				"returnAll": false,
+				"limit": 5
+			},
+			"credentials": {
+				"atendeBotApi": {
+					"id": "__CRED_MAIN__",
+					"name": "main"
+				}
+			}
+		},
+		{
+			"id": "duplicate-deal",
+			"name": "Duplicate deal",
+			"type": "n8n-nodes-atendebot.atendeBot",
+			"typeVersion": 1,
+			"position": [
+				1100,
+				0
+			],
+			"parameters": {
+				"resource": "deal",
+				"operation": "duplicate",
+				"dealId": "{{dealId}}"
+			},
+			"credentials": {
+				"atendeBotApi": {
+					"id": "__CRED_MAIN__",
+					"name": "main"
+				}
+			}
+		},
+		{
+			"id": "delete-copy",
+			"name": "Delete copy",
+			"type": "n8n-nodes-atendebot.atendeBot",
+			"typeVersion": 1,
+			"position": [
+				1320,
+				0
+			],
+			"parameters": {
+				"resource": "deal",
+				"operation": "delete",
+				"dealId": "={{ $('Duplicate deal').first().json.data.id }}"
+			},
+			"credentials": {
+				"atendeBotApi": {
+					"id": "__CRED_MAIN__",
+					"name": "main"
+				}
+			}
+		}
+	],
+	"connections": {
+		"Manual": {
+			"main": [
+				[
+					{
+						"node": "Add note",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Add note": {
+			"main": [
+				[
+					{
+						"node": "Get notes",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Get notes": {
+			"main": [
+				[
+					{
+						"node": "Delete note",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Delete note": {
+			"main": [
+				[
+					{
+						"node": "Get notes after delete",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Get notes after delete": {
+			"main": [
+				[
+					{
+						"node": "Duplicate deal",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Duplicate deal": {
+			"main": [
+				[
+					{
+						"node": "Delete copy",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		}
+	},
+	"settings": {
+		"timezone": "America/Sao_Paulo",
+		"executionOrder": "v1"
+	}
+}
