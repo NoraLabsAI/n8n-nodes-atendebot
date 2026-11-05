@@ -1,0 +1,12 @@
+{
+	"node": "n8n-nodes-atendebot.atendeBotTrigger",
+	"nodeVersion": "1.0",
+	"codexVersion": "1.0",
+	"categories": ["Sales", "Communication"],
+	"resources": {
+		"credentialDocumentation": [
+			{ "url": "https://github.com/noralabs/n8n-nodes-atendebot#credentials" }
+		],
+		"primaryDocumentation": [{ "url": "https://github.com/noralabs/n8n-nodes-atendebot#readme" }]
+	}
+}

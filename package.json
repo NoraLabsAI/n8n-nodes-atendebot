@@ -36,7 +36,8 @@
 			"dist/credentials/AtendeBotApi.credentials.js"
 		],
 		"nodes": [
-			"dist/nodes/AtendeBot/AtendeBot.node.js"
+			"dist/nodes/AtendeBot/AtendeBot.node.js",
+			"dist/nodes/AtendeBotTrigger/AtendeBotTrigger.node.js"
 		]
 	},
 	"devDependencies": {

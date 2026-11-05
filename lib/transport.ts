@@ -1,6 +1,7 @@
 import type {
 	IDataObject,
 	IExecuteFunctions,
+	IHookFunctions,
 	IHttpRequestMethods,
 	ILoadOptionsFunctions,
 	JsonObject,
@@ -12,7 +13,7 @@ import { idempotencyKey } from './idempotency';
 import { fetchPages, type Page } from './pagination';
 import { type Query, withQuery } from './query';
 
-type Context = IExecuteFunctions | ILoadOptionsFunctions;
+type Context = IExecuteFunctions | ILoadOptionsFunctions | IHookFunctions;
 
 export interface ApiRequest {
 	method: IHttpRequestMethods;

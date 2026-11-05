@@ -34,4 +34,17 @@ describe('describeApiError', () => {
 		expect(describeApiError(502, '<html>bad gateway</html>').message).toContain('HTTP_502');
 		expect(describeApiError(502, undefined).description).toBe('');
 	});
+
+	it('names the scopes the token lacks', () => {
+		const out = describeApiError(403, {
+			error: {
+				code: 'INSUFFICIENT_SCOPE',
+				message: 'x',
+				details: { required_scopes: ['contacts:read', 'cards:read'], missing_scopes: ['cards:read'] },
+			},
+		});
+		expect(out.message).toBe(
+			'The API token does not have the scope this operation needs. Missing: cards:read. [INSUFFICIENT_SCOPE]',
+		);
+	});
 });

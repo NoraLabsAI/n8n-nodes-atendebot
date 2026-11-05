@@ -56,7 +56,12 @@ const detailsText = (details: Record<string, unknown> | undefined): string => {
 export const describeApiError = (status: number, body: unknown): DescribedError => {
 	const error = (body as ApiErrorBody | undefined)?.error;
 	const code = error?.code ?? `HTTP_${status}`;
-	const message = MESSAGES[code] ?? `AtendeBot API error (${code}).`;
+	const missing = error?.details?.missing_scopes;
+	const missingText =
+		code === 'INSUFFICIENT_SCOPE' && Array.isArray(missing) && missing.length > 0
+			? ` Missing: ${missing.join(', ')}.`
+			: '';
+	const message = (MESSAGES[code] ?? `AtendeBot API error (${code}).`) + missingText;
 	const original = error?.message ? `API message: ${error.message}` : '';
 	return {
 		message: `${message} [${code}]`,

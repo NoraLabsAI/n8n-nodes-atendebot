@@ -3,7 +3,7 @@
 n8n community node for [AtendeBot](https://atende.bot): create and update contacts, deals,
 companies and tasks, and send WhatsApp messages from your workflows.
 
-[Installation](#installation) · [Credentials](#credentials) · [Operations](#operations) · [Behavior and limits](#behavior-and-limits) · [License](#license)
+[Installation](#installation) · [Credentials](#credentials) · [Operations](#operations) · [AtendeBot Trigger](#atendebot-trigger) · [Behavior and limits](#behavior-and-limits) · [License](#license)
 
 ## Installation
 
@@ -46,6 +46,30 @@ dropdowns loaded from your account. They walk every page, so long lists are comp
 pass an ID with an expression.
 
 The node can be used as a tool by AI agents.
+
+## AtendeBot Trigger
+
+Starts a workflow when something happens in AtendeBot (a message arrives, a deal moves, a task
+is created...). Pick the events in the node; **Include Group Events** also delivers WhatsApp group
+events. The output is the whole event envelope (`event`, `data`, `tenant`, `timestamp`,
+`event_id`, `occurred_at`).
+
+- **Activating the workflow creates the webhook** in AtendeBot; deactivating it deletes it.
+  Leftovers with the same URL are removed first.
+- **Scopes.** The token needs `webhooks:read` and `webhooks:write`, plus the read scope of every
+  resource in the events you pick (each event lists them in the dropdown). If one is missing the
+  node fails with `INSUFFICIENT_SCOPE` and names the missing scopes.
+- **Deliveries depend on the token.** If the token that created the webhook is revoked or loses a
+  required scope, AtendeBot stops delivering (HTTP 403 in the delivery history). Create a new
+  token and deactivate and reactivate the workflow.
+- **Public https URL.** AtendeBot only accepts a public https webhook URL. Your n8n instance
+  needs `WEBHOOK_URL` set to its public https address; localhost and private addresses are refused.
+- **Signature.** Every delivery is signed (HMAC-SHA256, header `X-Atendebot-Signature`); the node
+  checks it against the exact bytes received and answers 401 to anything else. The secret is
+  generated on activation and **stored in clear text in the workflow's static data**, so it is
+  visible in the n8n database and in workflow exports.
+- **No duplicate protection.** AtendeBot retries a failed delivery, so the same event can arrive
+  more than once. The node does not dedupe by `event_id`; do it in the workflow if it matters.
 
 ## Behavior and limits
 
