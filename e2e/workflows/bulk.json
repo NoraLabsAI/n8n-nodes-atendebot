@@ -1,0 +1,87 @@
+{
+	"name": "e2e bulk",
+	"nodes": [
+		{
+			"id": "manual",
+			"name": "Manual",
+			"type": "n8n-nodes-base.manualTrigger",
+			"typeVersion": 1,
+			"position": [
+				0,
+				0
+			],
+			"parameters": {}
+		},
+		{
+			"id": "rows",
+			"name": "Rows",
+			"type": "n8n-nodes-base.code",
+			"typeVersion": 2,
+			"position": [
+				220,
+				0
+			],
+			"parameters": {
+				"jsCode": "return Array.from({ length: 320 }, (_, i) => ({ json: ((i) => ({ name: '{{tag}} Bulk ' + String(i).padStart(4, '0'), phone: '{{phoneBulk}}' + String(i).padStart(4, '0') }))(i) }));"
+			}
+		},
+		{
+			"id": "create-bulk",
+			"name": "Create bulk",
+			"type": "n8n-nodes-atendebot.atendeBot",
+			"typeVersion": 1,
+			"position": [
+				440,
+				0
+			],
+			"parameters": {
+				"resource": "contact",
+				"operation": "create",
+				"name": "={{ $json.name }}",
+				"phone": "={{ $json.phone }}",
+				"additionalFields": {
+					"tags": [
+						"{{tagBulk}}"
+					]
+				}
+			},
+			"credentials": {
+				"atendeBotApi": {
+					"id": "__CRED_MAIN__",
+					"name": "main"
+				}
+			},
+			"retryOnFail": true,
+			"maxTries": 3,
+			"waitBetweenTries": 3000
+		}
+	],
+	"connections": {
+		"Manual": {
+			"main": [
+				[
+					{
+						"node": "Rows",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Rows": {
+			"main": [
+				[
+					{
+						"node": "Create bulk",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		}
+	},
+	"settings": {
+		"timezone": "America/Sao_Paulo",
+		"executionOrder": "v1"
+	}
+}

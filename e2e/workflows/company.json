@@ -1,0 +1,93 @@
+{
+	"name": "e2e company",
+	"nodes": [
+		{
+			"id": "manual",
+			"name": "Manual",
+			"type": "n8n-nodes-base.manualTrigger",
+			"typeVersion": 1,
+			"position": [
+				0,
+				0
+			],
+			"parameters": {}
+		},
+		{
+			"id": "company-a",
+			"name": "Company A",
+			"type": "n8n-nodes-atendebot.atendeBot",
+			"typeVersion": 1,
+			"position": [
+				220,
+				0
+			],
+			"parameters": {
+				"resource": "company",
+				"operation": "upsert",
+				"name": "{{tag}} Acme Ltda",
+				"additionalFields": {
+					"segment": "Retail"
+				}
+			},
+			"credentials": {
+				"atendeBotApi": {
+					"id": "__CRED_MAIN__",
+					"name": "main"
+				}
+			}
+		},
+		{
+			"id": "company-b",
+			"name": "Company B",
+			"type": "n8n-nodes-atendebot.atendeBot",
+			"typeVersion": 1,
+			"position": [
+				440,
+				0
+			],
+			"parameters": {
+				"resource": "company",
+				"operation": "upsert",
+				"name": "{{tag}} ACME LTDA",
+				"additionalFields": {
+					"description": "updated by node B",
+					"website": "https://acme.example.com"
+				}
+			},
+			"credentials": {
+				"atendeBotApi": {
+					"id": "__CRED_MAIN__",
+					"name": "main"
+				}
+			}
+		}
+	],
+	"connections": {
+		"Manual": {
+			"main": [
+				[
+					{
+						"node": "Company A",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Company A": {
+			"main": [
+				[
+					{
+						"node": "Company B",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		}
+	},
+	"settings": {
+		"timezone": "America/Sao_Paulo",
+		"executionOrder": "v1"
+	}
+}

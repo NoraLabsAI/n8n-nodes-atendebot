@@ -1,0 +1,65 @@
+{
+	"name": "e2e partial write",
+	"nodes": [
+		{
+			"id": "manual",
+			"name": "Manual",
+			"type": "n8n-nodes-base.manualTrigger",
+			"typeVersion": 1,
+			"position": [
+				0,
+				0
+			],
+			"parameters": {}
+		},
+		{
+			"id": "create-with-unknown-field",
+			"name": "Create with unknown field",
+			"type": "n8n-nodes-atendebot.atendeBot",
+			"typeVersion": 1,
+			"position": [
+				220,
+				0
+			],
+			"parameters": {
+				"resource": "contact",
+				"operation": "create",
+				"name": "{{tag}} Partial",
+				"phone": "{{phonePartial}}",
+				"additionalFields": {
+					"customFields": {
+						"fields": [
+							{
+								"name": "Campo que nao existe n8n",
+								"value": "x"
+							}
+						]
+					}
+				}
+			},
+			"credentials": {
+				"atendeBotApi": {
+					"id": "__CRED_MAIN__",
+					"name": "main"
+				}
+			}
+		}
+	],
+	"connections": {
+		"Manual": {
+			"main": [
+				[
+					{
+						"node": "Create with unknown field",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		}
+	},
+	"settings": {
+		"timezone": "America/Sao_Paulo",
+		"executionOrder": "v1"
+	}
+}

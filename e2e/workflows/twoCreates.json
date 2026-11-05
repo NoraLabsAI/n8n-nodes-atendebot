@@ -1,0 +1,90 @@
+{
+	"name": "e2e two creates",
+	"nodes": [
+		{
+			"id": "manual",
+			"name": "Manual",
+			"type": "n8n-nodes-base.manualTrigger",
+			"typeVersion": 1,
+			"position": [
+				0,
+				0
+			],
+			"parameters": {}
+		},
+		{
+			"id": "task-one",
+			"name": "Task one",
+			"type": "n8n-nodes-atendebot.atendeBot",
+			"typeVersion": 1,
+			"position": [
+				220,
+				0
+			],
+			"parameters": {
+				"resource": "task",
+				"operation": "create",
+				"title": "{{tag}} twin",
+				"assignee": "",
+				"additionalFields": {}
+			},
+			"credentials": {
+				"atendeBotApi": {
+					"id": "__CRED_MAIN__",
+					"name": "main"
+				}
+			}
+		},
+		{
+			"id": "task-two",
+			"name": "Task two",
+			"type": "n8n-nodes-atendebot.atendeBot",
+			"typeVersion": 1,
+			"position": [
+				440,
+				0
+			],
+			"parameters": {
+				"resource": "task",
+				"operation": "create",
+				"title": "{{tag}} twin",
+				"assignee": "",
+				"additionalFields": {}
+			},
+			"credentials": {
+				"atendeBotApi": {
+					"id": "__CRED_MAIN__",
+					"name": "main"
+				}
+			}
+		}
+	],
+	"connections": {
+		"Manual": {
+			"main": [
+				[
+					{
+						"node": "Task one",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Task one": {
+			"main": [
+				[
+					{
+						"node": "Task two",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		}
+	},
+	"settings": {
+		"timezone": "America/Sao_Paulo",
+		"executionOrder": "v1"
+	}
+}

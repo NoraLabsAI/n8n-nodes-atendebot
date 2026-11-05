@@ -1,0 +1,62 @@
+{
+	"name": "e2e task",
+	"nodes": [
+		{
+			"id": "manual",
+			"name": "Manual",
+			"type": "n8n-nodes-base.manualTrigger",
+			"typeVersion": 1,
+			"position": [
+				0,
+				0
+			],
+			"parameters": {}
+		},
+		{
+			"id": "create-task",
+			"name": "Create task",
+			"type": "n8n-nodes-atendebot.atendeBot",
+			"typeVersion": 1,
+			"position": [
+				220,
+				0
+			],
+			"parameters": {
+				"resource": "task",
+				"operation": "create",
+				"title": "{{tag}} Call back",
+				"assignee": "{{agent}}",
+				"additionalFields": {
+					"type": "ligacao",
+					"priority": "urgent",
+					"description": "created by n8n e2e",
+					"dueDate": "2026-11-21T09:30:00",
+					"card": "{{dealId}}"
+				}
+			},
+			"credentials": {
+				"atendeBotApi": {
+					"id": "__CRED_MAIN__",
+					"name": "main"
+				}
+			}
+		}
+	],
+	"connections": {
+		"Manual": {
+			"main": [
+				[
+					{
+						"node": "Create task",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		}
+	},
+	"settings": {
+		"timezone": "America/Sao_Paulo",
+		"executionOrder": "v1"
+	}
+}

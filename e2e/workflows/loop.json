@@ -1,0 +1,116 @@
+{
+	"name": "e2e loop",
+	"nodes": [
+		{
+			"id": "manual",
+			"name": "Manual",
+			"type": "n8n-nodes-base.manualTrigger",
+			"typeVersion": 1,
+			"position": [
+				0,
+				0
+			],
+			"parameters": {}
+		},
+		{
+			"id": "rows",
+			"name": "Rows",
+			"type": "n8n-nodes-base.code",
+			"typeVersion": 2,
+			"position": [
+				220,
+				0
+			],
+			"parameters": {
+				"jsCode": "return Array.from({ length: 3 }, (_, i) => ({ json: ((i) => ({ name: '{{tag}} Loop ' + i, phone: '{{phoneLoop}}' + i }))(i) }));"
+			}
+		},
+		{
+			"id": "loop",
+			"name": "Loop",
+			"type": "n8n-nodes-base.splitInBatches",
+			"typeVersion": 3,
+			"position": [
+				440,
+				0
+			],
+			"parameters": {
+				"batchSize": 1
+			}
+		},
+		{
+			"id": "create-in-loop",
+			"name": "Create in loop",
+			"type": "n8n-nodes-atendebot.atendeBot",
+			"typeVersion": 1,
+			"position": [
+				660,
+				0
+			],
+			"parameters": {
+				"resource": "contact",
+				"operation": "create",
+				"name": "={{ $json.name }}",
+				"phone": "={{ $json.phone }}",
+				"additionalFields": {}
+			},
+			"credentials": {
+				"atendeBotApi": {
+					"id": "__CRED_MAIN__",
+					"name": "main"
+				}
+			}
+		}
+	],
+	"connections": {
+		"Manual": {
+			"main": [
+				[
+					{
+						"node": "Rows",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Rows": {
+			"main": [
+				[
+					{
+						"node": "Loop",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Loop": {
+			"main": [
+				[],
+				[
+					{
+						"node": "Create in loop",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Create in loop": {
+			"main": [
+				[
+					{
+						"node": "Loop",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		}
+	},
+	"settings": {
+		"timezone": "America/Sao_Paulo",
+		"executionOrder": "v1"
+	}
+}

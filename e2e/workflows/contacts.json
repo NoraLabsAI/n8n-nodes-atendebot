@@ -1,0 +1,274 @@
+{
+	"name": "e2e contacts",
+	"nodes": [
+		{
+			"id": "manual",
+			"name": "Manual",
+			"type": "n8n-nodes-base.manualTrigger",
+			"typeVersion": 1,
+			"position": [
+				0,
+				0
+			],
+			"parameters": {}
+		},
+		{
+			"id": "create-contact",
+			"name": "Create contact",
+			"type": "n8n-nodes-atendebot.atendeBot",
+			"typeVersion": 1,
+			"position": [
+				220,
+				0
+			],
+			"parameters": {
+				"resource": "contact",
+				"operation": "create",
+				"name": "{{tag}} Ana",
+				"phone": "{{phoneA}}",
+				"additionalFields": {
+					"email": "{{tag}}-ana@example.com",
+					"jobTitle": "CTO",
+					"company": "{{tag}} Acme Ltda",
+					"tags": [
+						"{{tagA}}"
+					]
+				}
+			},
+			"credentials": {
+				"atendeBotApi": {
+					"id": "__CRED_MAIN__",
+					"name": "main"
+				}
+			}
+		},
+		{
+			"id": "create-lead",
+			"name": "Create lead",
+			"type": "n8n-nodes-atendebot.atendeBot",
+			"typeVersion": 1,
+			"position": [
+				440,
+				0
+			],
+			"parameters": {
+				"resource": "contact",
+				"operation": "create",
+				"name": "{{tag}} Lead",
+				"phone": "",
+				"additionalFields": {
+					"email": "{{tag}}-lead@example.com"
+				}
+			},
+			"credentials": {
+				"atendeBotApi": {
+					"id": "__CRED_MAIN__",
+					"name": "main"
+				}
+			}
+		},
+		{
+			"id": "upsert-contact",
+			"name": "Upsert contact",
+			"type": "n8n-nodes-atendebot.atendeBot",
+			"typeVersion": 1,
+			"position": [
+				660,
+				0
+			],
+			"parameters": {
+				"resource": "contact",
+				"operation": "upsert",
+				"name": "{{tag}} Ana Maria",
+				"phone": "+{{ (ph) oneA}}",
+				"additionalFields": {
+					"description": "upserted"
+				}
+			},
+			"credentials": {
+				"atendeBotApi": {
+					"id": "__CRED_MAIN__",
+					"name": "main"
+				}
+			}
+		},
+		{
+			"id": "get-by-id",
+			"name": "Get by id",
+			"type": "n8n-nodes-atendebot.atendeBot",
+			"typeVersion": 1,
+			"position": [
+				880,
+				0
+			],
+			"parameters": {
+				"resource": "contact",
+				"operation": "get",
+				"contactId": "={{ $('Create contact').item.json.data.id }}"
+			},
+			"credentials": {
+				"atendeBotApi": {
+					"id": "__CRED_MAIN__",
+					"name": "main"
+				}
+			}
+		},
+		{
+			"id": "get-by-phone",
+			"name": "Get by phone",
+			"type": "n8n-nodes-atendebot.atendeBot",
+			"typeVersion": 1,
+			"position": [
+				1100,
+				0
+			],
+			"parameters": {
+				"resource": "contact",
+				"operation": "get",
+				"contactId": "phone:{{phoneA}}"
+			},
+			"credentials": {
+				"atendeBotApi": {
+					"id": "__CRED_MAIN__",
+					"name": "main"
+				}
+			}
+		},
+		{
+			"id": "update-contact",
+			"name": "Update contact",
+			"type": "n8n-nodes-atendebot.atendeBot",
+			"typeVersion": 1,
+			"position": [
+				1320,
+				0
+			],
+			"parameters": {
+				"resource": "contact",
+				"operation": "update",
+				"contactId": "={{ $('Create contact').item.json.data.id }}",
+				"updateFields": {
+					"jobTitle": "CEO",
+					"tags": [
+						"{{tagB}}"
+					],
+					"tagsAction": "add"
+				}
+			},
+			"credentials": {
+				"atendeBotApi": {
+					"id": "__CRED_MAIN__",
+					"name": "main"
+				}
+			}
+		},
+		{
+			"id": "get-many-by-search",
+			"name": "Get many by search",
+			"type": "n8n-nodes-atendebot.atendeBot",
+			"typeVersion": 1,
+			"position": [
+				1540,
+				0
+			],
+			"parameters": {
+				"resource": "contact",
+				"operation": "getAll",
+				"returnAll": false,
+				"limit": 10,
+				"filters": {
+					"search": "{{tag}}"
+				}
+			},
+			"credentials": {
+				"atendeBotApi": {
+					"id": "__CRED_MAIN__",
+					"name": "main"
+				}
+			}
+		}
+	],
+	"connections": {
+		"Manual": {
+			"main": [
+				[
+					{
+						"node": "Create contact",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Create contact": {
+			"main": [
+				[
+					{
+						"node": "Create lead",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Create lead": {
+			"main": [
+				[
+					{
+						"node": "Upsert contact",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Upsert contact": {
+			"main": [
+				[
+					{
+						"node": "Get by id",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Get by id": {
+			"main": [
+				[
+					{
+						"node": "Get by phone",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Get by phone": {
+			"main": [
+				[
+					{
+						"node": "Update contact",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Update contact": {
+			"main": [
+				[
+					{
+						"node": "Get many by search",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		}
+	},
+	"settings": {
+		"timezone": "America/Sao_Paulo",
+		"executionOrder": "v1"
+	}
+}

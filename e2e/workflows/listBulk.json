@@ -1,0 +1,182 @@
+{
+	"name": "e2e list bulk",
+	"nodes": [
+		{
+			"id": "manual",
+			"name": "Manual",
+			"type": "n8n-nodes-base.manualTrigger",
+			"typeVersion": 1,
+			"position": [
+				0,
+				0
+			],
+			"parameters": {}
+		},
+		{
+			"id": "all-by-tag",
+			"name": "All by tag",
+			"type": "n8n-nodes-atendebot.atendeBot",
+			"typeVersion": 1,
+			"position": [
+				220,
+				0
+			],
+			"parameters": {
+				"resource": "contact",
+				"operation": "getAll",
+				"returnAll": true,
+				"filters": {
+					"tags": [
+						"{{tagBulk}}"
+					]
+				}
+			},
+			"credentials": {
+				"atendeBotApi": {
+					"id": "__CRED_MAIN__",
+					"name": "main"
+				}
+			}
+		},
+		{
+			"id": "all-by-search",
+			"name": "All by search",
+			"type": "n8n-nodes-atendebot.atendeBot",
+			"typeVersion": 1,
+			"position": [
+				440,
+				0
+			],
+			"parameters": {
+				"resource": "contact",
+				"operation": "getAll",
+				"returnAll": true,
+				"filters": {
+					"search": "{{tag}} Bulk 02"
+				}
+			},
+			"credentials": {
+				"atendeBotApi": {
+					"id": "__CRED_MAIN__",
+					"name": "main"
+				}
+			}
+		},
+		{
+			"id": "first-30-by-tag",
+			"name": "First 30 by tag",
+			"type": "n8n-nodes-atendebot.atendeBot",
+			"typeVersion": 1,
+			"position": [
+				660,
+				0
+			],
+			"parameters": {
+				"resource": "contact",
+				"operation": "getAll",
+				"returnAll": false,
+				"limit": 30,
+				"filters": {
+					"tags": [
+						"{{tagBulk}}"
+					]
+				}
+			},
+			"credentials": {
+				"atendeBotApi": {
+					"id": "__CRED_MAIN__",
+					"name": "main"
+				}
+			}
+		},
+		{
+			"id": "by-tag-a-or-b",
+			"name": "By tag A or B",
+			"type": "n8n-nodes-atendebot.atendeBot",
+			"typeVersion": 1,
+			"position": [
+				880,
+				0
+			],
+			"parameters": {
+				"resource": "contact",
+				"operation": "getAll",
+				"returnAll": true,
+				"filters": {
+					"tags": [
+						"{{tagA}}",
+						"{{tagB}}"
+					],
+					"search": "{{tag}} Ana"
+				}
+			},
+			"credentials": {
+				"atendeBotApi": {
+					"id": "__CRED_MAIN__",
+					"name": "main"
+				}
+			}
+		},
+		{
+			"id": "by-email",
+			"name": "By email",
+			"type": "n8n-nodes-atendebot.atendeBot",
+			"typeVersion": 1,
+			"position": [
+				1100,
+				0
+			],
+			"parameters": {
+				"resource": "contact",
+				"operation": "getAll",
+				"returnAll": true,
+				"filters": {
+					"email": "{{tag}}-ana@example.com"
+				}
+			},
+			"credentials": {
+				"atendeBotApi": {
+					"id": "__CRED_MAIN__",
+					"name": "main"
+				}
+			}
+		}
+	],
+	"connections": {
+		"Manual": {
+			"main": [
+				[
+					{
+						"node": "All by tag",
+						"type": "main",
+						"index": 0
+					},
+					{
+						"node": "All by search",
+						"type": "main",
+						"index": 0
+					},
+					{
+						"node": "First 30 by tag",
+						"type": "main",
+						"index": 0
+					},
+					{
+						"node": "By tag A or B",
+						"type": "main",
+						"index": 0
+					},
+					{
+						"node": "By email",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		}
+	},
+	"settings": {
+		"timezone": "America/Sao_Paulo",
+		"executionOrder": "v1"
+	}
+}

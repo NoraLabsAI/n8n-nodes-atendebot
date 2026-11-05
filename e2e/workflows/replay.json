@@ -1,0 +1,83 @@
+{
+	"name": "e2e replay",
+	"nodes": [
+		{
+			"id": "manual",
+			"name": "Manual",
+			"type": "n8n-nodes-base.manualTrigger",
+			"typeVersion": 1,
+			"position": [
+				0,
+				0
+			],
+			"parameters": {}
+		},
+		{
+			"id": "rows",
+			"name": "Rows",
+			"type": "n8n-nodes-base.code",
+			"typeVersion": 2,
+			"position": [
+				220,
+				0
+			],
+			"parameters": {
+				"jsCode": "return [{ json: { name: '{{tag}} Replay', phone: '{{phoneReplay}}' } }, { json: { name: 'bad', phone: '123' } }];"
+			}
+		},
+		{
+			"id": "create-with-retry",
+			"name": "Create with retry",
+			"type": "n8n-nodes-atendebot.atendeBot",
+			"typeVersion": 1,
+			"position": [
+				440,
+				0
+			],
+			"parameters": {
+				"resource": "contact",
+				"operation": "create",
+				"name": "={{ $json.name }}",
+				"phone": "={{ $json.phone }}",
+				"additionalFields": {}
+			},
+			"credentials": {
+				"atendeBotApi": {
+					"id": "__CRED_MAIN__",
+					"name": "main"
+				}
+			},
+			"retryOnFail": true,
+			"maxTries": 2,
+			"waitBetweenTries": 1000
+		}
+	],
+	"connections": {
+		"Manual": {
+			"main": [
+				[
+					{
+						"node": "Rows",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Rows": {
+			"main": [
+				[
+					{
+						"node": "Create with retry",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		}
+	},
+	"settings": {
+		"timezone": "America/Sao_Paulo",
+		"executionOrder": "v1"
+	}
+}

@@ -1,0 +1,204 @@
+{
+	"name": "e2e deals",
+	"nodes": [
+		{
+			"id": "manual",
+			"name": "Manual",
+			"type": "n8n-nodes-base.manualTrigger",
+			"typeVersion": 1,
+			"position": [
+				0,
+				0
+			],
+			"parameters": {}
+		},
+		{
+			"id": "create-deal",
+			"name": "Create deal",
+			"type": "n8n-nodes-atendebot.atendeBot",
+			"typeVersion": 1,
+			"position": [
+				220,
+				0
+			],
+			"parameters": {
+				"resource": "deal",
+				"operation": "create",
+				"title": "{{tag}} Deal",
+				"pipeline": "{{pipeline}}",
+				"stage": "",
+				"additionalFields": {
+					"value": 1500,
+					"contact": "phone:{{phoneA}}",
+					"company": "{{tag}} Acme Ltda",
+					"assignee": "{{agent}}",
+					"dueDate": "2026-11-20T10:00:00"
+				}
+			},
+			"credentials": {
+				"atendeBotApi": {
+					"id": "__CRED_MAIN__",
+					"name": "main"
+				}
+			}
+		},
+		{
+			"id": "get-deal",
+			"name": "Get deal",
+			"type": "n8n-nodes-atendebot.atendeBot",
+			"typeVersion": 1,
+			"position": [
+				440,
+				0
+			],
+			"parameters": {
+				"resource": "deal",
+				"operation": "get",
+				"dealId": "={{ $('Create deal').item.json.data.id }}"
+			},
+			"credentials": {
+				"atendeBotApi": {
+					"id": "__CRED_MAIN__",
+					"name": "main"
+				}
+			}
+		},
+		{
+			"id": "update-deal",
+			"name": "Update deal",
+			"type": "n8n-nodes-atendebot.atendeBot",
+			"typeVersion": 1,
+			"position": [
+				660,
+				0
+			],
+			"parameters": {
+				"resource": "deal",
+				"operation": "update",
+				"dealId": "={{ $('Create deal').item.json.data.id }}",
+				"stagePipeline": "{{pipeline}}",
+				"updateStage": "",
+				"updateFields": {
+					"title": "{{tag}} Deal (updated)",
+					"value": 2500
+				}
+			},
+			"credentials": {
+				"atendeBotApi": {
+					"id": "__CRED_MAIN__",
+					"name": "main"
+				}
+			}
+		},
+		{
+			"id": "move-deal",
+			"name": "Move deal",
+			"type": "n8n-nodes-atendebot.atendeBot",
+			"typeVersion": 1,
+			"position": [
+				880,
+				0
+			],
+			"parameters": {
+				"resource": "deal",
+				"operation": "moveToStage",
+				"dealId": "={{ $('Create deal').item.json.data.id }}",
+				"stagePipeline": "{{pipeline}}",
+				"moveStage": "{{stage2}}"
+			},
+			"credentials": {
+				"atendeBotApi": {
+					"id": "__CRED_MAIN__",
+					"name": "main"
+				}
+			}
+		},
+		{
+			"id": "get-many-deals",
+			"name": "Get many deals",
+			"type": "n8n-nodes-atendebot.atendeBot",
+			"typeVersion": 1,
+			"position": [
+				1100,
+				0
+			],
+			"parameters": {
+				"resource": "deal",
+				"operation": "getAll",
+				"returnAll": false,
+				"limit": 10,
+				"filters": {
+					"pipeline": "{{pipeline}}",
+					"stage": "{{stage2}}"
+				}
+			},
+			"credentials": {
+				"atendeBotApi": {
+					"id": "__CRED_MAIN__",
+					"name": "main"
+				}
+			}
+		}
+	],
+	"connections": {
+		"Manual": {
+			"main": [
+				[
+					{
+						"node": "Create deal",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Create deal": {
+			"main": [
+				[
+					{
+						"node": "Get deal",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Get deal": {
+			"main": [
+				[
+					{
+						"node": "Update deal",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Update deal": {
+			"main": [
+				[
+					{
+						"node": "Move deal",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Move deal": {
+			"main": [
+				[
+					{
+						"node": "Get many deals",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		}
+	},
+	"settings": {
+		"timezone": "America/Sao_Paulo",
+		"executionOrder": "v1"
+	}
+}
