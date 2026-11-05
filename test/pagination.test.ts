@@ -12,6 +12,12 @@ const endpoint = (total: number) =>
 	});
 
 describe('fetchPages', () => {
+	it('takes a response without meta as the last page (GET /webhooks/events has none)', async () => {
+		const fetch = vi.fn(async (): Promise<Page<number>> => ({ data: [1, 2, 3] }));
+		expect(await fetchPages(fetch, {})).toEqual([1, 2, 3]);
+		expect(fetch).toHaveBeenCalledTimes(1);
+	});
+
 	it('returns every row across pages and repeats the filters on each request', async () => {
 		const fetch = endpoint(250);
 		const rows = await fetchPages(fetch, { tags: ['a', 'b'], email: 'x@y.com' });

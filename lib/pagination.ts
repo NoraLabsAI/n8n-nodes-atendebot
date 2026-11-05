@@ -6,7 +6,8 @@ export const MAX_OFFSET = 10000;
 
 export interface Page<T> {
 	data: T[];
-	meta: { has_more?: boolean };
+	/** Absent on endpoints that are not paged, such as `GET /webhooks/events`. */
+	meta?: { has_more?: boolean };
 }
 
 /**
@@ -24,7 +25,7 @@ export const fetchPages = async <T>(
 	for (let page = 1; page * pageSize <= MAX_OFFSET; page++) {
 		const body = await fetchPage({ ...filters, page, page_size: pageSize });
 		results.push(...body.data);
-		if (!body.meta.has_more || body.data.length === 0) break;
+		if (!body.meta?.has_more || body.data.length === 0) break;
 		if (limit !== undefined && results.length >= limit) break;
 	}
 	return limit === undefined ? results : results.slice(0, limit);
