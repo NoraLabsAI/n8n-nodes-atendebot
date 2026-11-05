@@ -23,6 +23,11 @@ const conversationId: INodeProperties = {
 	displayOptions: showFor(R, 'get', 'update', 'close', 'transfer', 'addNote', 'getNotes', 'startChatbot'),
 };
 
+const refuseEmpty = (ctx: IExecuteFunctions, i: number, body: IDataObject, message: string): IDataObject => {
+	if (!Object.keys(body).length) throw new NodeOperationError(ctx.getNode(), message, { itemIndex: i });
+	return body;
+};
+
 const patch =
 	(build: (ctx: IExecuteFunctions, i: number) => IDataObject): Handler =>
 	async (ctx, i) => {
@@ -259,23 +264,31 @@ export const conversation: ResourceDefinition = {
 			);
 		},
 
-		update: patch((ctx, i) => conversationPatch(ctx.getNodeParameter('updateFields', i) as IDataObject)),
+		update: patch((ctx, i) =>
+			refuseEmpty(
+				ctx,
+				i,
+				conversationPatch(ctx.getNodeParameter('updateFields', i) as IDataObject),
+				'Add at least one field to update',
+			),
+		),
 
 		close: patch((ctx, i) => {
 			const classification = ctx.getNodeParameter('closeClassification', i) as string;
 			return { status: 'closed', ...(classification ? { classification } : {}) };
 		}),
 
-		transfer: patch((ctx, i) => {
-			const body = transferPatch(
-				ctx.getNodeParameter('transferTeam', i) as string,
-				ctx.getNodeParameter('transferAgent', i) as string,
-			);
-			if (!Object.keys(body).length) {
-				throw new NodeOperationError(ctx.getNode(), 'Choose a team, an agent, or both', { itemIndex: i });
-			}
-			return body;
-		}),
+		transfer: patch((ctx, i) =>
+			refuseEmpty(
+				ctx,
+				i,
+				transferPatch(
+					ctx.getNodeParameter('transferTeam', i) as string,
+					ctx.getNodeParameter('transferAgent', i) as string,
+				),
+				'Choose a team, an agent, or both',
+			),
+		),
 
 		addNote: async (ctx, i) => {
 			const { body } = await apiRequest(

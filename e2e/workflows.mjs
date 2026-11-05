@@ -323,7 +323,8 @@ export const buildWorkflows = (c) => ({
 		bot('Add note', { resource: 'deal', operation: 'addNote', dealId: c.dealId, noteText: `${c.tag} note from the n8n e2e` }),
 		bot('Get notes', { resource: 'deal', operation: 'getNotes', dealId: c.dealId, returnAll: true }),
 		bot('Delete note', { resource: 'deal', operation: 'deleteNote', dealId: c.dealId, noteId: "={{ $('Add note').first().json.data.id }}" }),
-		bot('Get notes after delete', { resource: 'deal', operation: 'getNotes', dealId: c.dealId, returnAll: false, limit: 5 }),
+		// Empty on purpose after the delete: alwaysOutputData keeps the chain going.
+		bot('Get notes after delete', { resource: 'deal', operation: 'getNotes', dealId: c.dealId, returnAll: false, limit: 5 }, { alwaysOutputData: true }),
 		bot('Duplicate deal', { resource: 'deal', operation: 'duplicate', dealId: c.dealId }),
 		bot('Delete copy', { resource: 'deal', operation: 'delete', dealId: "={{ $('Duplicate deal').first().json.data.id }}" }),
 	]),

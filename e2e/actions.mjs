@@ -299,7 +299,11 @@ export const runActions = async ({ env, cred }) => {
 		return `exec ${exec.id}: success, 0 items from both (the account has no conversations, so this proves the request is accepted with those filters, not the data shape)`;
 	});
 	await errorCase('ACT-err-conv-update-missing', 'Conversation Update, error path: unknown conversation', 'errConvUpdate', 'NOT_FOUND');
-	await errorCase('ACT-err-conv-update-empty', 'Conversation Update, error path: nothing to update', 'errConvUpdateEmpty', 'INVALID_REQUEST');
+	await check('ACT-err-conv-update-empty', 'Conversation Update, error path: no field chosen is refused by the node before any call', async () => {
+		const message = failed(await run('errConvUpdateEmpty'));
+		assert(message.includes('Add at least one field to update'), message);
+		return message;
+	});
 	await errorCase('ACT-err-conv-close-missing', 'Conversation Close, error path: unknown conversation', 'errConvClose', 'NOT_FOUND');
 	await errorCase('ACT-err-conv-transfer-missing', 'Conversation Transfer, error path: unknown conversation', 'errConvTransfer', 'NOT_FOUND');
 	await check('ACT-err-conv-transfer-none', 'Conversation Transfer, error path: neither team nor agent chosen', async () => {

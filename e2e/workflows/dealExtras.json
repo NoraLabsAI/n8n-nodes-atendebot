@@ -99,7 +99,8 @@
 					"id": "__CRED_MAIN__",
 					"name": "main"
 				}
-			}
+			},
+			"alwaysOutputData": true
 		},
 		{
 			"id": "duplicate-deal",
