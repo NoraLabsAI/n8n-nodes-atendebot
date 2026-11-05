@@ -54,7 +54,7 @@ export class AtendeBotTrigger implements INodeType {
 		],
 		properties: [
 			{
-				displayName: 'Events',
+				displayName: 'Events Names or IDs',
 				name: 'events',
 				type: 'multiOptions',
 				typeOptions: { loadOptionsMethod: 'getEvents' },
