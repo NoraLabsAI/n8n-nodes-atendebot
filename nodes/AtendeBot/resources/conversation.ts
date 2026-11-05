@@ -8,9 +8,6 @@ import type { Handler, ResourceDefinition } from './types';
 
 const R = 'conversation';
 
-const EXPRESSION =
-	'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>';
-
 const STATUSES = [
 	{ name: 'Closed', value: 'closed' },
 	{ name: 'Open', value: 'open' },
@@ -77,7 +74,8 @@ export const conversation: ResourceDefinition = {
 			type: 'options',
 			typeOptions: { loadOptionsMethod: 'getClassifications' },
 			default: '',
-			description: `Optional. ${EXPRESSION}.`,
+			description:
+				'Optional. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
 			displayOptions: showFor(R, 'close'),
 		},
 		{
@@ -86,7 +84,8 @@ export const conversation: ResourceDefinition = {
 			type: 'options',
 			typeOptions: { loadOptionsMethod: 'getTeams' },
 			default: '',
-			description: `With no agent, the conversation goes to the queue of the team. ${EXPRESSION}.`,
+			description:
+				'With no agent, the conversation goes to the queue of the team. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
 			displayOptions: showFor(R, 'transfer'),
 		},
 		{
@@ -95,7 +94,8 @@ export const conversation: ResourceDefinition = {
 			type: 'options',
 			typeOptions: { loadOptionsMethod: 'getAgents', loadOptionsDependsOn: ['transferTeam'] },
 			default: '',
-			description: `Only the agents of the team above are listed, or all agents when no team is picked. ${EXPRESSION}.`,
+			description:
+				'Only the agents of the team above are listed, or all agents when no team is picked. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
 			displayOptions: showFor(R, 'transfer'),
 		},
 		{
@@ -122,7 +122,8 @@ export const conversation: ResourceDefinition = {
 					type: 'options',
 					typeOptions: { loadOptionsMethod: 'getAgents' },
 					default: '',
-					description: EXPRESSION,
+					description:
+					'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
 				},
 				{
 					displayName: 'Classification Name or ID',
@@ -130,7 +131,8 @@ export const conversation: ResourceDefinition = {
 					type: 'options',
 					typeOptions: { loadOptionsMethod: 'getClassifications' },
 					default: '',
-					description: `Only accepted together with Status Closed, on a conversation that is still open. ${EXPRESSION}.`,
+					description:
+				'Only accepted together with Status Closed, on a conversation that is still open. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
 				},
 				{ displayName: 'Remove Assignee', name: 'clearAssignee', type: 'boolean', default: false, description: 'Whether to send the conversation back to the queue' },
 				{ displayName: 'Remove Classification', name: 'clearClassification', type: 'boolean', default: false },
@@ -149,7 +151,8 @@ export const conversation: ResourceDefinition = {
 					type: 'options',
 					typeOptions: { loadOptionsMethod: 'getTeams' },
 					default: '',
-					description: `Changing only the team keeps the current assignee. ${EXPRESSION}.`,
+					description:
+				'Changing only the team keeps the current assignee. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
 				},
 			],
 		},
@@ -168,7 +171,8 @@ export const conversation: ResourceDefinition = {
 					type: 'options',
 					typeOptions: { loadOptionsMethod: 'getAgents' },
 					default: '',
-					description: EXPRESSION,
+					description:
+					'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
 				},
 				{
 					displayName: 'Channel Name or ID',
@@ -176,7 +180,8 @@ export const conversation: ResourceDefinition = {
 					type: 'options',
 					typeOptions: { loadOptionsMethod: 'getChannels' },
 					default: '',
-					description: EXPRESSION,
+					description:
+					'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
 				},
 				{
 					displayName: 'Network',
@@ -214,7 +219,8 @@ export const conversation: ResourceDefinition = {
 					type: 'options',
 					typeOptions: { loadOptionsMethod: 'getTeams' },
 					default: '',
-					description: EXPRESSION,
+					description:
+					'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
 				},
 			],
 		},
