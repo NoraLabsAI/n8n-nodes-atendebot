@@ -1,6 +1,7 @@
 // Minimal client for n8n's internal REST API (the one the editor uses) plus the docker plumbing.
 // No dependencies. Runs on the server.
 import { execFileSync } from 'node:child_process';
+import { lookup } from 'node:dns/promises';
 
 export const URL_N8N = 'http://127.0.0.1:15678';
 export const NAME = 'n8n-nodes-atendebot-n8n';
@@ -16,8 +17,12 @@ export const startN8n = async ({ home, packDir, tarball }) => {
 	sh('rm', ['-rf', home]);
 	sh('mkdir', ['-p', home]);
 	try { sh('docker', ['network', 'create', NETWORK]); } catch { /* already there */ }
+	// The resolvers of this server answer "DNS server returned an error" now and then under n8n's one-lookup-per-request
+	// pattern, which aborted long runs. Pinning the API host to the address resolved here takes DNS out of the proof
+	// (TLS still checks the host name).
+	const apiIp = (await lookup('api-hmlg.atende.bot', { family: 4 })).address;
 	sh('docker', [
-		'run', '-d', '--name', NAME, '--network', NETWORK,
+		'run', '-d', '--add-host', `api-hmlg.atende.bot:${apiIp}`, '--name', NAME, '--network', NETWORK,
 		'-p', '127.0.0.1:15678:5678',
 		'-v', `${home}:/home/node/.n8n`, '-v', `${packDir}:/pack:ro`,
 		'-e', 'WEBHOOK_URL=https://example.com/', '-e', 'N8N_SECURE_COOKIE=false',
