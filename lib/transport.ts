@@ -7,7 +7,7 @@ import type {
 } from 'n8n-workflow';
 import { NodeApiError, sleep } from 'n8n-workflow';
 import { normalizeBaseUrl } from './baseUrl';
-import { describeApiError } from './errors';
+import { type ApiErrorBody, describeApiError } from './errors';
 import { idempotencyKey } from './idempotency';
 import { fetchPages, type Page } from './pagination';
 import { type Query, withQuery } from './query';
@@ -33,8 +33,10 @@ export interface ApiResponse {
 const MAX_RETRIES = 3;
 const MAX_RETRY_WAIT_SECONDS = 60;
 
-const retryAfterSeconds = (headers: IDataObject): number => {
-	const seconds = Number(headers['retry-after']);
+/** The `retry-after` header, or the same value the API repeats in `error.details`. */
+const retryAfterSeconds = (headers: IDataObject, body: unknown): number => {
+	const fromBody = (body as ApiErrorBody | undefined)?.error?.details?.retryAfterSeconds;
+	const seconds = Number(headers['retry-after'] ?? fromBody);
 	return Number.isFinite(seconds) && seconds > 0 ? Math.min(seconds, MAX_RETRY_WAIT_SECONDS) : 1;
 };
 
@@ -79,7 +81,7 @@ export const apiRequest = async (
 
 		const { statusCode: status, body } = response;
 		if (status === 429 && attempt < MAX_RETRIES) {
-			await sleep(retryAfterSeconds(response.headers) * 1000);
+			await sleep(retryAfterSeconds(response.headers, body) * 1000);
 			continue;
 		}
 		if (status < 400 || (status === 404 && request.notFoundOk)) return { status, body };

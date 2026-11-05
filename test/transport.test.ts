@@ -55,6 +55,15 @@ describe('apiRequest', () => {
 		expect(new Set(keys).size).toBe(1);
 	});
 
+	it('falls back to the retry time in the error body when the header is missing', async () => {
+		const { ctx } = makeCtx([
+			{ statusCode: 429, body: { error: { code: 'RATE_LIMITED', details: { retryAfterSeconds: 12 } } } },
+			{ statusCode: 200 },
+		]);
+		await apiRequest(ctx, { method: 'GET', path: '/contacts' }, 0);
+		expect(sleep).toHaveBeenCalledWith(12000);
+	});
+
 	it('gives up after 3 retries and reports RATE_LIMITED in English', async () => {
 		const { ctx, calls } = makeCtx(
 			Array.from({ length: 5 }, () => ({
