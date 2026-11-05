@@ -68,13 +68,12 @@ const stageProperty = (name: string, dependsOn: string, ops: string[], required:
 	displayName: 'Stage Name or ID',
 	name,
 	type: 'options',
-	description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
 	required,
 	typeOptions: { loadOptionsMethod: 'getStages', loadOptionsDependsOn: [dependsOn] },
 	default: '',
 	description: required
 		? 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>'
-		: 'Leave empty for the first stage of the pipeline. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
+		: 'Leave empty for the first stage of the pipeline. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
 	displayOptions: showFor(R, ...ops),
 });
 
@@ -82,12 +81,11 @@ const pipelineProperty = (name: string, ops: string[], forFilter: boolean): INod
 	displayName: forFilter ? 'Pipeline (to List Stages)' : 'Pipeline',
 	name,
 	type: 'options',
-	description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
 	required: !forFilter,
 	typeOptions: { loadOptionsMethod: 'getPipelines' },
 	default: '',
 	description: forFilter
-		? 'Only used to list the stages below. A deal cannot change pipeline.'
+		? 'Only used to list the stages below, since a deal cannot change pipeline. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>'
 		: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
 	displayOptions: showFor(R, ...ops),
 });

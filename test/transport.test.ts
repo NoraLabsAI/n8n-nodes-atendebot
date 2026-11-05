@@ -1,7 +1,7 @@
 import type { IExecuteFunctions, INode } from 'n8n-workflow';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const sleep = vi.fn(async (_ms: number) => {});
+const sleep = vi.fn<(ms: number) => Promise<void>>(async () => {});
 vi.mock('n8n-workflow', async (importOriginal) => ({
 	...(await importOriginal<typeof import('n8n-workflow')>()),
 	sleep: (ms: number) => sleep(ms),
@@ -10,10 +10,11 @@ vi.mock('n8n-workflow', async (importOriginal) => ({
 import { apiRequest } from '../lib/transport';
 
 type Reply = { statusCode: number; headers?: Record<string, string>; body?: unknown };
+type Options = { url: string; headers: Record<string, string> };
 
 const makeCtx = (replies: Reply[], executionId = '42') => {
-	const calls: Array<Record<string, any>> = [];
-	const request = vi.fn(async (_cred: string, options: Record<string, any>) => {
+	const calls: Options[] = [];
+	const request = vi.fn(async (...[, options]: [string, Options]) => {
 		calls.push(options);
 		const r = replies.shift() ?? { statusCode: 200, body: {} };
 		return { statusCode: r.statusCode, headers: r.headers ?? {}, body: r.body ?? {} };
@@ -24,7 +25,7 @@ const makeCtx = (replies: Reply[], executionId = '42') => {
 		getInstanceId: () => 'inst',
 		getWorkflow: () => ({ id: 'wf' }),
 		getExecutionId: () => executionId,
-		getRunIndex: () => 0,
+		evaluateExpression: () => 0,
 		helpers: { httpRequestWithAuthentication: request },
 	} as unknown as IExecuteFunctions;
 	return { ctx, calls };
@@ -90,7 +91,7 @@ describe('apiRequest', () => {
 
 	it('refuses a plain-http base URL before sending anything', async () => {
 		const { ctx, calls } = makeCtx([]);
-		(ctx as any).getCredentials = async () => ({ baseUrl: 'http://evil.example/v3' });
+		ctx.getCredentials = async () => ({ baseUrl: 'http://evil.example/v3' });
 		await expect(apiRequest(ctx, { method: 'GET', path: '/me' }, 0)).rejects.toThrow('https');
 		expect(calls).toHaveLength(0);
 	});

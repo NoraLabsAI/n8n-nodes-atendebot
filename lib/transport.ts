@@ -58,7 +58,7 @@ export const apiRequest = async (
 			workflowId: String(ctx.getWorkflow().id ?? ''),
 			executionId: ctx.getExecutionId(),
 			nodeId: ctx.getNode().id,
-			runIndex: ctx.getRunIndex(),
+			runIndex: Number(ctx.evaluateExpression('{{ $runIndex }}', itemIndex)),
 			itemIndex,
 		});
 		if (key) headers['Idempotency-Key'] = key;

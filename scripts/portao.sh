@@ -31,10 +31,10 @@ if [ "$FAIL" = 0 ]; then
   step "build" npm run build
   step "typecheck tests" npm run typecheck:tests
   step "vitest" npx vitest run
-  step "analyzePackage (source)" node "$BASE/bin/scan.mjs" "$WORK"
+  step "analyzePackage (source)" node "$BASE/bin/scan.mjs" "$WORK" source
   mkdir -p "$WORK/.pack" && npm pack --silent --pack-destination "$WORK/.pack" >/dev/null 2>&1
   mkdir -p "$WORK/.packed" && tar -xzf "$WORK"/.pack/*.tgz -C "$WORK/.packed" 2>/dev/null
-  step "analyzePackage (npm pack)" node "$BASE/bin/scan.mjs" "$WORK/.packed/package"
+  step "analyzePackage (npm pack)" node "$BASE/bin/scan.mjs" "$WORK/.packed/package" dist
 fi
 
 if [ "$FAIL" = 0 ]; then echo "PORTAO: PASS"; else echo "PORTAO: FAIL"; exit 1; fi
