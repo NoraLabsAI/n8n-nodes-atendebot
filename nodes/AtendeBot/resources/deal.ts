@@ -64,31 +64,62 @@ const dealOptions = (): INodeProperties[] => [
 	},
 ];
 
-const stageProperty = (name: string, dependsOn: string, ops: string[], required: boolean): INodeProperties => ({
-	displayName: 'Stage Name or ID',
-	name,
+const createPipeline: INodeProperties = {
+	displayName: 'Pipeline Name or ID',
+	name: 'pipeline',
 	type: 'options',
-	required,
-	typeOptions: { loadOptionsMethod: 'getStages', loadOptionsDependsOn: [dependsOn] },
-	default: '',
-	description: required
-		? 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>'
-		: 'Leave empty for the first stage of the pipeline. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
-	displayOptions: showFor(R, ...ops),
-});
-
-const pipelineProperty = (name: string, ops: string[], forFilter: boolean): INodeProperties => ({
-	displayName: forFilter ? 'Pipeline (to List Stages)' : 'Pipeline',
-	name,
-	type: 'options',
-	required: !forFilter,
+	required: true,
 	typeOptions: { loadOptionsMethod: 'getPipelines' },
 	default: '',
-	description: forFilter
-		? 'Only used to list the stages below, since a deal cannot change pipeline. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>'
-		: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
-	displayOptions: showFor(R, ...ops),
-});
+	description:
+		'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+	displayOptions: showFor(R, 'create'),
+};
+
+const createStage: INodeProperties = {
+	displayName: 'Stage Name or ID',
+	name: 'stage',
+	type: 'options',
+	typeOptions: { loadOptionsMethod: 'getStages', loadOptionsDependsOn: ['pipeline'] },
+	default: '',
+	description:
+		'Leave empty for the first stage of the pipeline. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+	displayOptions: showFor(R, 'create'),
+};
+
+const stagePipeline: INodeProperties = {
+	displayName: 'Pipeline (to List Stages) Name or ID',
+	name: 'stagePipeline',
+	type: 'options',
+	typeOptions: { loadOptionsMethod: 'getPipelines' },
+	default: '',
+	description:
+		'Only used to list the stages below, since a deal cannot change pipeline. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+	displayOptions: showFor(R, 'update', 'moveToStage'),
+};
+
+const moveStage: INodeProperties = {
+	displayName: 'Stage Name or ID',
+	name: 'moveStage',
+	type: 'options',
+	required: true,
+	typeOptions: { loadOptionsMethod: 'getStages', loadOptionsDependsOn: ['stagePipeline'] },
+	default: '',
+	description:
+		'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+	displayOptions: showFor(R, 'moveToStage'),
+};
+
+const updateStage: INodeProperties = {
+	displayName: 'Stage Name or ID',
+	name: 'updateStage',
+	type: 'options',
+	typeOptions: { loadOptionsMethod: 'getStages', loadOptionsDependsOn: ['stagePipeline'] },
+	default: '',
+	description:
+		'Leave empty to keep the current stage. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+	displayOptions: showFor(R, 'update'),
+};
 
 const dealId: INodeProperties = {
 	displayName: 'Deal ID',
@@ -125,8 +156,8 @@ export const deal: ResourceDefinition = {
 			default: '',
 			displayOptions: showFor(R, 'create'),
 		},
-		pipelineProperty('pipeline', ['create'], false),
-		stageProperty('stage', 'pipeline', ['create'], false),
+		createPipeline,
+		createStage,
 		{
 			displayName: 'Additional Fields',
 			name: 'additionalFields',
@@ -136,9 +167,9 @@ export const deal: ResourceDefinition = {
 			displayOptions: showFor(R, 'create'),
 			options: dealOptions(),
 		},
-		pipelineProperty('stagePipeline', ['update', 'moveToStage'], true),
-		stageProperty('moveStage', 'stagePipeline', ['moveToStage'], true),
-		stageProperty('updateStage', 'stagePipeline', ['update'], false),
+		stagePipeline,
+		moveStage,
+		updateStage,
 		{
 			displayName: 'Update Fields',
 			name: 'updateFields',

@@ -52,13 +52,15 @@ export const apiRequest = async (
 	const credentials = await ctx.getCredentials('atendeBotApi');
 	const baseUrl = normalizeBaseUrl(String(credentials.baseUrl), ctx.getNode());
 	const headers: IDataObject = {};
-	if (request.idempotent && itemIndex !== undefined && 'getExecutionId' in ctx) {
+	if (request.idempotent && itemIndex !== undefined) {
+		// An item index only exists when running an item, i.e. in an execute context.
+		const exec = ctx as IExecuteFunctions;
 		const key = idempotencyKey({
-			instanceId: ctx.getInstanceId(),
-			workflowId: String(ctx.getWorkflow().id ?? ''),
-			executionId: ctx.getExecutionId(),
-			nodeId: ctx.getNode().id,
-			runIndex: Number(ctx.evaluateExpression('{{ $runIndex }}', itemIndex)),
+			instanceId: exec.getInstanceId(),
+			workflowId: String(exec.getWorkflow().id ?? ''),
+			executionId: exec.getExecutionId(),
+			nodeId: exec.getNode().id,
+			runIndex: Number(exec.evaluateExpression('{{ $runIndex }}', itemIndex)),
 			itemIndex,
 		});
 		if (key) headers['Idempotency-Key'] = key;

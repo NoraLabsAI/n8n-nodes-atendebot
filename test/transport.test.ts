@@ -12,7 +12,7 @@ import { apiRequest } from '../lib/transport';
 type Reply = { statusCode: number; headers?: Record<string, string>; body?: unknown };
 type Options = { url: string; headers: Record<string, string> };
 
-const makeCtx = (replies: Reply[], executionId = '42') => {
+const makeCtx = (replies: Reply[], executionId = '42', baseUrl = 'https://api.test/public/v3/') => {
 	const calls: Options[] = [];
 	const request = vi.fn(async (...[, options]: [string, Options]) => {
 		calls.push(options);
@@ -20,7 +20,7 @@ const makeCtx = (replies: Reply[], executionId = '42') => {
 		return { statusCode: r.statusCode, headers: r.headers ?? {}, body: r.body ?? {} };
 	});
 	const ctx = {
-		getCredentials: async () => ({ baseUrl: 'https://api.test/public/v3/', apiToken: 't' }),
+		getCredentials: async () => ({ baseUrl, apiToken: 't' }),
 		getNode: () => ({ id: 'n1', name: 'AtendeBot' }) as INode,
 		getInstanceId: () => 'inst',
 		getWorkflow: () => ({ id: 'wf' }),
@@ -90,8 +90,7 @@ describe('apiRequest', () => {
 	});
 
 	it('refuses a plain-http base URL before sending anything', async () => {
-		const { ctx, calls } = makeCtx([]);
-		ctx.getCredentials = async () => ({ baseUrl: 'http://evil.example/v3' });
+		const { ctx, calls } = makeCtx([], '42', 'http://evil.example/v3');
 		await expect(apiRequest(ctx, { method: 'GET', path: '/me' }, 0)).rejects.toThrow('https');
 		expect(calls).toHaveLength(0);
 	});
