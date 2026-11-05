@@ -77,7 +77,7 @@ export const apiRequest = async (
 			body: request.body,
 			json: true,
 			returnFullResponse: true,
-			ignoreHttpStatusCodes: true,
+			ignoreHttpStatusErrors: true,
 		})) as { statusCode: number; headers: IDataObject; body: unknown };
 
 		const { statusCode: status, body } = response;

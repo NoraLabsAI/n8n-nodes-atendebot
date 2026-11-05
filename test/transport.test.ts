@@ -10,7 +10,7 @@ vi.mock('n8n-workflow', async (importOriginal) => ({
 import { apiRequest } from '../lib/transport';
 
 type Reply = { statusCode: number; headers?: Record<string, string>; body?: unknown };
-type Options = { url: string; headers: Record<string, string> };
+type Options = { url: string; headers: Record<string, string>; ignoreHttpStatusErrors?: boolean };
 
 const makeCtx = (replies: Reply[], executionId = '42', baseUrl = 'https://api.test/public/v3/') => {
 	const calls: Options[] = [];
@@ -34,6 +34,12 @@ const makeCtx = (replies: Reply[], executionId = '42', baseUrl = 'https://api.te
 beforeEach(() => sleep.mockClear());
 
 describe('apiRequest', () => {
+	it('asks n8n to hand back error statuses, otherwise it throws its own error before ours', async () => {
+		const { ctx, calls } = makeCtx([{ statusCode: 200 }]);
+		await apiRequest(ctx, { method: 'GET', path: '/me' }, 0);
+		expect(calls[0].ignoreHttpStatusErrors).toBe(true);
+	});
+
 	it('builds the URL from the normalised base and repeats array query values', async () => {
 		const { ctx, calls } = makeCtx([{ statusCode: 200 }]);
 		await apiRequest(ctx, { method: 'GET', path: '/contacts', query: { tags: ['a', 'b'] } }, 0);
