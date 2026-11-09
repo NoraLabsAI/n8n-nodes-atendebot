@@ -55,6 +55,7 @@ The credential test calls `GET /me`, which accepts any valid token whatever its 
 | Conversation | Transfer | Moves a conversation to a team and/or an agent. The agent list follows the chosen team. A team alone also clears the assignee. |
 | Conversation | Add Note / Get Notes | Adds an internal note (never sent to the contact), or lists the notes. |
 | Conversation | Start Chatbot | Runs a published chatbot (trigger "Called by redirect") in a conversation. The API cannot list chatbots, so the chatbot is an ID you paste. |
+| Conversation | Send Message | Sends a message into an existing conversation. Same fields as Message > Send, without choosing the destination. Needs `messages:write`. |
 | Message | Get / Get Many | Gets one message or lists them (filter by conversation, since, oldest first). Each message carries its `delivery` status. |
 | Message | Send | Sends text, media (by URL or from a binary file) or an approved template to a contact (through a connected channel) or into a conversation. |
 | Task | Create | Creates a task, optionally linked to a deal and assigned to an agent. |

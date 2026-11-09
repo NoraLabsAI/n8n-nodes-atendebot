@@ -39,9 +39,56 @@ const readTemplateParams = async (ctx: IExecuteFunctions, i: number, template: s
 	return params;
 };
 
+const SENDERS = [R, 'conversation'];
+
+/** Send fields also show in Conversation > Send Message; `extra` can override `resource` to stay Message-only. */
 const when = (extra: Record<string, unknown[]>) => ({
-	show: { resource: [R], operation: SEND, ...extra },
+	show: { resource: SENDERS, operation: SEND, ...extra },
 });
+
+/** Builds and POSTs the message from the shared send fields; `target` is the destination part of the body. */
+export const sendMessage = async (ctx: IExecuteFunctions, i: number, target: IDataObject): Promise<IDataObject[]> => {
+	const body: IDataObject = { ...target };
+
+		const type = ctx.getNodeParameter('messageType', i);
+		if (type === 'text') body.content = ctx.getNodeParameter('text', i);
+		if (type === 'media' || type === 'mediaBinary') {
+			const filename = ctx.getNodeParameter('mediaFilename', i) as string;
+			if (type === 'media') {
+				body.media = {
+					url: ctx.getNodeParameter('mediaUrl', i),
+					type: ctx.getNodeParameter('mediaType', i),
+					...(filename ? { filename } : {}),
+				};
+			} else {
+				const file = await uploadBinary(ctx, i);
+				const chosen = ctx.getNodeParameter('binaryMediaType', i) as string;
+				const name = filename || file.filename;
+				body.media = { url: file.url, type: chosen === 'auto' ? file.type : chosen, ...(name ? { filename: name } : {}) };
+			}
+			const caption = ctx.getNodeParameter('caption', i) as string;
+			if (caption) body.content = caption;
+		}
+		if (type === 'template') {
+			body.template = ctx.getNodeParameter('template', i);
+			const params = await readTemplateParams(ctx, i, body.template as string);
+			if (params.length) body.params = params;
+			const header = ctx.getNodeParameter('headerMediaUrl', i) as string;
+			if (header) body.header_media = { url: header };
+		}
+
+		const options = ctx.getNodeParameter('options', i) as IDataObject;
+		if (options.sender) body.sender = options.sender;
+		if (options.replyTo) body.reply_to = options.replyTo;
+		if (options.reopenIfClosed) body.reopen_if_closed = true;
+
+		const { body: response } = await apiRequest(
+			ctx,
+			{ method: 'POST', path: '/messages', body, idempotent: true },
+			i,
+		);
+		return [response as IDataObject];
+};
 
 export const message: ResourceDefinition = {
 	properties: [
@@ -110,7 +157,7 @@ export const message: ResourceDefinition = {
 			required: true,
 			default: '',
 			description: 'ID of the contact, or phone:&lt;number&gt; with country code (5534999998888)',
-			displayOptions: when({ destination: ['contact'] }),
+			displayOptions: when({ resource: [R], destination: ['contact'] }),
 		},
 		{
 			displayName: 'Channel Name or ID',
@@ -121,7 +168,7 @@ export const message: ResourceDefinition = {
 			default: '',
 			description:
 				'Connected channel that sends the message. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
-			displayOptions: when({ destination: ['contact'] }),
+			displayOptions: when({ resource: [R], destination: ['contact'] }),
 		},
 		{
 			displayName: 'Conversation ID',
@@ -129,14 +176,14 @@ export const message: ResourceDefinition = {
 			type: 'string',
 			required: true,
 			default: '',
-			displayOptions: when({ destination: ['conversation'] }),
+			displayOptions: when({ resource: [R], destination: ['conversation'] }),
 		},
 		{
 			displayName: 'Message Type',
 			name: 'messageType',
 			type: 'options',
 			default: 'text',
-			displayOptions: showFor(R, ...SEND),
+			displayOptions: when({}),
 			options: [
 				{ name: 'Text', value: 'text' },
 				{ name: 'Media (by URL)', value: 'media' },
@@ -261,7 +308,7 @@ export const message: ResourceDefinition = {
 			type: 'collection',
 			placeholder: 'Add Option',
 			default: {},
-			displayOptions: showFor(R, ...SEND),
+			displayOptions: when({}),
 			options: [
 				{
 					displayName: 'Reopen If Closed',
@@ -320,53 +367,14 @@ export const message: ResourceDefinition = {
 			);
 		},
 
-		send: async (ctx, i) => {
-			const body: IDataObject = {};
+		send: (ctx, i) => {
 			if (ctx.getNodeParameter('destination', i) === 'contact') {
-				body.contact = contactRef(ctx.getNodeParameter('contact', i) as string);
-				body.channel = ctx.getNodeParameter('channel', i);
-			} else {
-				body.conversation = ctx.getNodeParameter('conversation', i);
+				return sendMessage(ctx, i, {
+					contact: contactRef(ctx.getNodeParameter('contact', i) as string),
+					channel: ctx.getNodeParameter('channel', i),
+				});
 			}
-
-			const type = ctx.getNodeParameter('messageType', i);
-			if (type === 'text') body.content = ctx.getNodeParameter('text', i);
-			if (type === 'media' || type === 'mediaBinary') {
-				const filename = ctx.getNodeParameter('mediaFilename', i) as string;
-				if (type === 'media') {
-					body.media = {
-						url: ctx.getNodeParameter('mediaUrl', i),
-						type: ctx.getNodeParameter('mediaType', i),
-						...(filename ? { filename } : {}),
-					};
-				} else {
-					const file = await uploadBinary(ctx, i);
-					const chosen = ctx.getNodeParameter('binaryMediaType', i) as string;
-					const name = filename || file.filename;
-					body.media = { url: file.url, type: chosen === 'auto' ? file.type : chosen, ...(name ? { filename: name } : {}) };
-				}
-				const caption = ctx.getNodeParameter('caption', i) as string;
-				if (caption) body.content = caption;
-			}
-			if (type === 'template') {
-				body.template = ctx.getNodeParameter('template', i);
-				const params = await readTemplateParams(ctx, i, body.template as string);
-				if (params.length) body.params = params;
-				const header = ctx.getNodeParameter('headerMediaUrl', i) as string;
-				if (header) body.header_media = { url: header };
-			}
-
-			const options = ctx.getNodeParameter('options', i) as IDataObject;
-			if (options.sender) body.sender = options.sender;
-			if (options.replyTo) body.reply_to = options.replyTo;
-			if (options.reopenIfClosed) body.reopen_if_closed = true;
-
-			const { body: response } = await apiRequest(
-				ctx,
-				{ method: 'POST', path: '/messages', body, idempotent: true },
-				i,
-			);
-			return [response as IDataObject];
+			return sendMessage(ctx, i, { conversation: ctx.getNodeParameter('conversation', i) });
 		},
 	},
 };

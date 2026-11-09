@@ -4,6 +4,7 @@ import { conversationPatch, transferPatch } from '../../../lib/conversation';
 import { pathRef } from '../../../lib/refs';
 import { apiRequest, listAll } from '../../../lib/transport';
 import { readLimit, returnAllProperties, showFor, toApiDate } from './shared';
+import { sendMessage } from './message';
 import type { Handler, ResourceDefinition } from './types';
 
 const R = 'conversation';
@@ -20,7 +21,7 @@ const conversationId: INodeProperties = {
 	type: 'string',
 	required: true,
 	default: '',
-	displayOptions: showFor(R, 'get', 'update', 'close', 'transfer', 'addNote', 'getNotes', 'startChatbot'),
+	displayOptions: showFor(R, 'get', 'update', 'close', 'transfer', 'addNote', 'getNotes', 'send', 'startChatbot'),
 };
 
 const refuseEmpty = (ctx: IExecuteFunctions, i: number, body: IDataObject, message: string): IDataObject => {
@@ -58,6 +59,7 @@ export const conversation: ResourceDefinition = {
 				{ name: 'Get', value: 'get', action: 'Get a conversation', description: 'Get a conversation by ID' },
 				{ name: 'Get Many', value: 'getAll', action: 'Get many conversations', description: 'Get many conversations' },
 				{ name: 'Get Notes', value: 'getNotes', action: 'Get the notes of a conversation', description: 'Get the internal notes of a conversation' },
+				{ name: 'Send Message', value: 'send', action: 'Send a message in a conversation', description: 'Send a text, media or template message into a conversation' },
 				{ name: 'Start Chatbot', value: 'startChatbot', action: 'Start a chatbot in a conversation', description: 'Run a published chatbot in a conversation' },
 				{ name: 'Transfer', value: 'transfer', action: 'Transfer a conversation', description: 'Move a conversation to a team and/or an agent' },
 				{ name: 'Update', value: 'update', action: 'Update a conversation', description: 'Update status, assignee, team or classification' },
@@ -311,6 +313,8 @@ export const conversation: ResourceDefinition = {
 				readLimit(ctx, i),
 				i,
 			),
+
+		send: (ctx, i) => sendMessage(ctx, i, { conversation: ctx.getNodeParameter('conversationId', i) }),
 
 		startChatbot: async (ctx, i) => {
 			const { body } = await apiRequest(
